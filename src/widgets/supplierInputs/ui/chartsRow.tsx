@@ -29,8 +29,8 @@ export const ChartsRow: React.FC<MonthRowProps> = ({
  
 
       <div className="mt-4 grid sm:grid-cols-3 gap-4">
-        {metricMeta.map((mm) => (
-          <div>
+        {metricMeta.map((mm, i) => (
+          <div key={i}>
             <label className="text-sm font-medium text-slate-700">
               {mm.label}
             </label> 

@@ -1,7 +1,9 @@
  
 export type Supplier = {
   supplier: string
+  id: number
   data: {
+    quality: Record<keyof Correlations, QualityValue>;
     month:number
     localHiring: number, 
     completeness: number
@@ -21,6 +23,12 @@ export interface SupplierState {
     metric: MetricKey,
     value: number
   ) => void;
+  updateSupplierQuality: (
+      supplierName: string,
+      month: number,
+      metric: MetricKey,
+      value: QualityValue,
+    ) => void;
 }
 
  
@@ -32,4 +40,4 @@ export type Correlations = {
 };
 
 export type MetricKey = keyof Correlations;  
- 
+ export type QualityValue = "1" | "2" | "3";

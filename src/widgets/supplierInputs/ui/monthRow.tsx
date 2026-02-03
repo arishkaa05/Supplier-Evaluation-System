@@ -1,17 +1,28 @@
-import { MetricKey } from "@/shared/store/suppliers/type/supplierType";
-import { Trash2 } from "lucide-react";
+import React from "react";
+import { MetricKey, QualityValue } from "@/shared/store/suppliers/type/supplierType";
+import { Trash2 } from "lucide-react"; 
+ 
+const accuracyOptions: Array<{ value: QualityValue; name: string }> = [
+  { value: "1", name: "точно" },
+  { value: "2", name: "неточно" },
+  { value: "3", name: "неизмеримо" },
+];
 
 type MonthRowProps = {
   supplierName: string;
   month: number;
   isLast: boolean;
+
   getCell: (supplierName: string, month: number, key: MetricKey) => number;
-  onChangeNumber: (
+  onChangeNumber: (supplierName: string, month: number, key: MetricKey, raw: string) => void;
+  getQuality: (supplierName: string, month: number, key: MetricKey) => QualityValue;
+  onChangeQuality: (
     supplierName: string,
     month: number,
     key: MetricKey,
-    raw: string,
+    value: QualityValue,
   ) => void;
+
   onRemoveMonth: (month: number) => void;
 };
 
@@ -21,6 +32,8 @@ export const MonthRow: React.FC<MonthRowProps> = ({
   isLast,
   getCell,
   onChangeNumber,
+  getQuality,
+  onChangeQuality,
   onRemoveMonth,
 }) => {
   const metricMeta: Array<{
@@ -29,23 +42,13 @@ export const MonthRow: React.FC<MonthRowProps> = ({
     hint: string;
     trend: string;
   }> = [
-    {
-      key: "localHiring",
-      label: "Local hiring, %",
-      hint: "benefit",
-      trend: "↑",
-    },
-    {
-      key: "completeness",
-      label: "Completeness, %",
-      hint: "benefit",
-      trend: "↑",
-    },
+    { key: "localHiring", label: "Local hiring, %", hint: "benefit", trend: "↑" },
+    { key: "completeness", label: "Completeness, %", hint: "benefit", trend: "↑" },
     { key: "defects", label: "Defects, %", hint: "cost", trend: "↓" },
   ];
 
   return (
-    <div className="p-4  border-b-2 border-slate-200">
+    <div className={`p-4 ${isLast ? "" : "border-b-2 border-slate-200"}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="font-semibold">
           Месяц <span className="text-slate-700">{month}</span>
@@ -63,22 +66,57 @@ export const MonthRow: React.FC<MonthRowProps> = ({
       </div>
 
       <div className="mt-4 grid sm:grid-cols-3 gap-4">
-        {metricMeta.map((mm) => (
-          <div>
-            <label className="text-sm font-medium text-slate-700">
-              {mm.label}
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={getCell(supplierName, month, mm.key)}
-              onChange={(raw) =>
-                onChangeNumber(supplierName, month, mm.key, raw)
-              }
-              className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1"
-            />
-          </div>
-        ))}
+        {metricMeta.map((mm) => {
+          const selected = getQuality(supplierName, month, mm.key);
+          const groupName = `${supplierName}-${month}-${mm.key}-quality`;
+
+          return (
+            <div key={mm.key} className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">
+                {mm.label}
+              </label>
+
+              <input
+                type="number"
+                step="0.01"
+                value={getCell(supplierName, month, mm.key)}
+                onChange={(e) =>
+                  onChangeNumber(supplierName, month, mm.key, e.target.value)
+                }
+                className="w-full rounded-lg border border-slate-300 px-2 py-1"
+              />
+
+              {isLast && (
+                <div className="rounded-lg border border-slate-200 bg-white p-2">
+                  <div className="text-xs text-slate-500 mb-2">Достоверность</div>
+
+
+                  <div className="flex flex-wrap gap-3">
+                    {accuracyOptions.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className="inline-flex items-center gap-2 text-xs text-slate-700"
+                      >
+                      
+                        <input
+                          type="radio"
+                          name={groupName}
+                          value={opt.value}
+                          checked={selected === opt.value}
+                          onChange={() =>
+                            onChangeQuality(supplierName, month, mm.key, opt.value)
+                          }
+                          className="accent-slate-900"
+                        />
+                        {opt.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

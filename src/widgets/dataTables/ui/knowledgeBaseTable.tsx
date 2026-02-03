@@ -1,6 +1,7 @@
 import { 
   knowledgeBase,
 } from "@/shared/config/"; 
+import { areas } from "@/shared/config/data/preparingknowledgeBase";
 import { cn } from "@/shared/lib/utils";
 import { CellPill } from "@/shared/ui/cellPill"; 
 
@@ -73,6 +74,12 @@ export const KnowledgeBaseTable = () => {
                     level={r.assessment.level}
                     trend={r.assessment.trend}
                   />
+                </td>
+                 <td className="px-2  ">
+                 { (areas[r.no - 1].name_area)}
+                </td>
+                   <td className="px-2  ">
+                 { (areas[r.no - 1].formula_area)}
                 </td>
               </tr>
             ))}

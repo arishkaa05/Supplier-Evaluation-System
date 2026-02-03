@@ -30,7 +30,7 @@ export const FuzzyResultTable = () => {
 
         <div className="mt-5 grid lg:grid-cols-2 gap-6">
           {supplierRules.map((sp) => (
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-scroll">
+            <div key={sp.supplier} className="rounded-2xl border border-slate-200 bg-white overflow-scroll">
               <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 border-b border-slate-200">
                 <div className="font-semibold">{sp.supplier}</div>
               </div>

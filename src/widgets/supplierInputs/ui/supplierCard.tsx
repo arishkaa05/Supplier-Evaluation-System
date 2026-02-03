@@ -2,10 +2,10 @@ import { useMemo, FC } from "react";
 import { Trash2 } from "lucide-react";
 import {
   MetricKey,
+  QualityValue,
   Supplier,
 } from "@/shared/store/suppliers/type/supplierType";
 import { MonthRow } from "./monthRow";
-import { LineChart } from "@/shared/components/charts";
 import { ChartsRow } from "./chartsRow";
 import { PearsonResult } from "./pearsonResult";
 
@@ -20,6 +20,17 @@ type SupplierCardProps = {
     key: MetricKey,
     raw: string,
   ) => void;
+  getQuality: (
+    supplierName: string,
+    month: number,
+    key: MetricKey,
+  ) => QualityValue;
+  onChangeQuality: (
+    supplierName: string,
+    month: number,
+    key: MetricKey,
+    value: QualityValue,
+  ) => void;
 };
 
 export const SupplierCard: FC<SupplierCardProps> = ({
@@ -28,6 +39,8 @@ export const SupplierCard: FC<SupplierCardProps> = ({
   onRemoveMonth,
   getCell,
   onChangeNumber,
+  onChangeQuality,
+  getQuality,
 }) => {
   const spMonths = useMemo(
     () => sp.data.map((d) => d.month).sort((a, b) => a - b),
@@ -60,15 +73,14 @@ export const SupplierCard: FC<SupplierCardProps> = ({
             getCell={getCell}
             onChangeNumber={onChangeNumber}
             onRemoveMonth={onRemoveMonth}
+            getQuality={getQuality}
+            onChangeQuality={onChangeQuality}
           />
-        ))} 
+        ))}
         <ChartsRow supplier={sp} />
 
         <PearsonResult supplier={sp} />
- 
       </div>
-
-      
     </div>
   );
 };
