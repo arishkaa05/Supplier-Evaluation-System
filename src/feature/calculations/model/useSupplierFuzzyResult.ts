@@ -15,13 +15,72 @@ import { directionDeterminantUp } from "./directionDeterminantUp";
 import { findOutputOFNForAssessment } from "./findOutputOFNForAssessment";
 import { findParamsForTerm } from "./findParamsForTerm";
 import { ofnShift } from "./ofnShift";
-import { aggregateSupplierScore, FiredRule } from "./aggregateScore";
+import { aggregateSupplierScore, FiredRule, SupplierEvaluation } from "./aggregateScore";
+import { MetricKey } from "@/shared/store/suppliers/type/supplierType";
 
-export function useSupplierRules() {
+export type FuzzyBlocker = {
+  metric: MetricKey;
+  reason: "missing" | "expert";
+  details: string;
+};
+
+export type SupplierFuzzyResult = {
+  supplier: string;
+  rules: FiredRule[];
+  evaluation: SupplierEvaluation | null;
+  blockers: FuzzyBlocker[];
+  status: "ok" | "blocked";
+};
+
+const METRIC_NAMES: Record<MetricKey, string> = {
+  localHiring: "наёма местных жителей",
+  completeness: "полноты заказа",
+  defects: "дефектов",
+};
+
+function detectBlockers(s: Supplier): FuzzyBlocker[] {
+  const blockers: FuzzyBlocker[] = [];
+  const metrics: MetricKey[] = ["localHiring", "completeness", "defects"];
+
+  for (const metric of metrics) {
+    const qualities = s.data.map((d) => d.quality?.[metric] ?? "1");
+    const missing = qualities.filter((q) => q === "0").length;
+    const expert = qualities.filter((q) => q === "2").length;
+
+    if (missing > 0) {
+      blockers.push({
+        metric,
+        reason: "missing",
+        details: `Отсутствует ${missing} из ${qualities.length} наблюдений ${METRIC_NAMES[metric]} — фаззификация невозможна.`,
+      });
+    } else if (expert >= Math.ceil(qualities.length / 2)) {
+      blockers.push({
+        metric,
+        reason: "expert",
+        details: `${expert} из ${qualities.length} наблюдений ${METRIC_NAMES[metric]} заданы экспертно — направление тренда не может быть надёжно определено.`,
+      });
+    }
+  }
+
+  return blockers;
+}
+
+export function useSupplierRules(): SupplierFuzzyResult[] {
   const { supplier } = useSupplierStore();
 
   return useMemo(() => {
-    return supplier.map((s: Supplier) => {
+    return supplier.map((s: Supplier): SupplierFuzzyResult => {
+      const blockers = detectBlockers(s);
+      if (blockers.length > 0) {
+        return {
+          supplier: s.supplier,
+          rules: [],
+          evaluation: null,
+          blockers,
+          status: "blocked",
+        };
+      }
+
       const localHiringTerms = getActiveTermsForCriterion(s, localHiringDb, "localHiring");
       const completenessTerms = getActiveTermsForCriterion(s, completenessDb, "completeness");
       const defectsTerms = getActiveTermsForCriterion(s, defectsDb, "defects");
@@ -92,7 +151,13 @@ export function useSupplierRules() {
 
       const evaluation = aggregateSupplierScore(rules);
 
-      return { supplier: s.supplier, rules, evaluation };
+      return {
+        supplier: s.supplier,
+        rules,
+        evaluation,
+        blockers: [],
+        status: "ok",
+      };
     });
   }, [supplier]);
 }
