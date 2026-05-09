@@ -3,7 +3,10 @@ export type quality = Record<keyof Correlations, QualityValue>
 export type SupplierData =  {
     quality: quality;
     month:number
-    localHiring: number, 
+    // Дата наблюдения в формате "DD.MM.YYYY" — опционально для импортированных
+    // через CSV поставщиков. Если не задана, выводится по индексу month.
+    date?: string
+    localHiring: number,
     completeness: number
     defects: number
   }

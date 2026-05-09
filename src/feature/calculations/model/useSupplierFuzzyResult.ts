@@ -44,16 +44,19 @@ function detectBlockers(s: Supplier): FuzzyBlocker[] {
 
   for (const metric of metrics) {
     const qualities = s.data.map((d) => d.quality?.[metric] ?? "1");
-    const missing = qualities.filter((q) => q === "0").length;
+    // "0" и "3" — наблюдение отсутствует/неизвестно, "2" — задано экспертно.
+    const missing = qualities.filter((q) => q === "0" || q === "3").length;
     const expert = qualities.filter((q) => q === "2").length;
 
+    // Любая неточная или отсутствующая запись блокирует OFN-вывод —
+    // направление и значение OFN требуют точных значений на всём горизонте.
     if (missing > 0) {
       blockers.push({
         metric,
         reason: "missing",
         details: `Отсутствует ${missing} из ${qualities.length} наблюдений ${METRIC_NAMES[metric]} — фаззификация невозможна.`,
       });
-    } else if (expert >= Math.ceil(qualities.length / 2)) {
+    } else if (expert > 0) {
       blockers.push({
         metric,
         reason: "expert",

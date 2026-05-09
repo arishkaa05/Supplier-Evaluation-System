@@ -232,7 +232,16 @@ const MultiopPanel: FC<{ areas: MultiopArea[] }> = ({ areas }) => {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
-            <RuleHead />
+            <thead className="bg-slate-50">
+              <tr className="text-xs text-slate-600 uppercase tracking-wide">
+                <th className="px-2 py-2 border-b border-slate-200 text-center">№ правила</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">Наём</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">Полнота</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">Дефекты</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">Заключение</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-left">Описание</th>
+              </tr>
+            </thead>
             <tbody className="divide-y divide-slate-200">
               {visible.map((a) => {
                 const rule = ruleByNo.get(Number(a.id));
@@ -260,6 +269,16 @@ const MultiopPanel: FC<{ areas: MultiopArea[] }> = ({ areas }) => {
                     <td className="text-center px-2 py-1">{formatTerm(rule?.completeness)}</td>
                     <td className="text-center px-2 py-1">{formatTerm(rule?.defects)}</td>
                     <td className="text-center px-2 py-1">{formatTerm(rule?.assessment)}</td>
+                    <td className="text-left px-2 py-1 text-xs text-slate-600">
+                      {a.answer ?? "—"}
+                      {a.explanation && a.explanation.length > 0 && (
+                        <ul className="list-disc pl-5 mt-1 space-y-0.5">
+                          {a.explanation.map((line, i) => (
+                            <li key={i}>{line}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
