@@ -1,17 +1,27 @@
- import { FuzzyResultTable, SupplierEvaluation } from "@/feature/calculations";
-import { areas, symptomsByParamId } from "@/shared/config/data/preparingknowledgeBase";
+import { FuzzyResultTable, SupplierEvaluation } from "@/feature/calculations";
+import {
+  areas,
+  symptomsByParamId,
+} from "@/shared/config/data/preparingknowledgeBase";
 import result from "@/feature/calculations/model/math";
 import { useState, useMemo, FC, useEffect } from "react";
 import { Button } from "@/shared/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/shared/ui/card";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@radix-ui/react-accordion";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@radix-ui/react-accordion";
 import { Separator } from "@radix-ui/react-separator";
-import React from "react";
 import { LayoutDashboard } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
- 
+import { useSupplierStore } from "@/shared/store/suppliers";
+import { calcFinalQuality } from "@/shared/lib/calcFinalQuality";
+import { explanationSolveForQuality } from "@/feature/calculations/model/math/explanation";
+
 const Dashboards = () => {
-  console.log('12345', symptomsByParamId, areas, result(1))
+  console.log("12345", symptomsByParamId, areas, result(1));
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
@@ -27,8 +37,7 @@ const Dashboards = () => {
   );
 };
 
-export default Dashboards;  
-  
+export default Dashboards;
 
 type Area = {
   id: number | string;
@@ -42,19 +51,23 @@ type Props = {
   selectedPatientId?: string;
 };
 
-const StatusBadge:FC<{ status: string }> = ({ status }) => {
+const StatusBadge: FC<{ status: string }> = ({ status }) => {
   if (status === "1") return <Badge>Не подходит ({status})</Badge>;
   if (status === "2") return <Badge>Подходит ({status})</Badge>;
-  if (status === "6") return <Badge variant="secondary">Может подходить ({status})</Badge>;
-  if (status === "5") return <Badge variant="secondary">Может не подходить ({status})</Badge>;
+  if (status === "6")
+    return <Badge variant="secondary">Может подходить ({status})</Badge>;
+  if (status === "5")
+    return <Badge variant="secondary">Может не подходить ({status})</Badge>;
   return <Badge variant="outline">Статус: ({status})</Badge>;
 };
 
-export const ResultCard:FC<Props> = ({ selectedPatientId }) => {
-  const [resultArea, setResultArea] =useState<Area[]>([]);
-  const [moreInformation, setMoreInformation] =useState(false);
+export const ResultCard: FC<Props> = ({ selectedPatientId }) => {
+  const [resultArea, setResultArea] = useState<Area[]>([]);
+  const [quality, setQuality] = useState(['', '', '']);
+  const [moreInformation, setMoreInformation] = useState(false);
+  const supplier = useSupplierStore((s) => s.supplier);
 
-  const summary =useMemo(() => {
+  const summary = useMemo(() => {
     const suitable = resultArea.filter((a) => a.status === "2");
     const maybe = resultArea.filter((a) => a.status === "6");
 
@@ -66,14 +79,19 @@ export const ResultCard:FC<Props> = ({ selectedPatientId }) => {
     };
   }, [resultArea]);
 
-  const getResult =   () => {
+  const getResult = () => {
     setMoreInformation(false);
+    console.log(supplier);
 
-     const response =   result(1) 
+    const response = result(1);
     setResultArea(Array.isArray(response) ? response : []);
+    const calcQuality = calcFinalQuality(supplier[0].data);
+    setQuality([explanationSolveForQuality(calcQuality.localHiring), explanationSolveForQuality(calcQuality.completeness), explanationSolveForQuality(calcQuality.defects)]);
   };
 
-  useEffect(() => {getResult()}, [])
+  useEffect(() => {
+    getResult();
+  }, []);
 
   return (
     <Card className="mt-3 mb-20 shadow-xl">
@@ -81,7 +99,7 @@ export const ResultCard:FC<Props> = ({ selectedPatientId }) => {
         <CardTitle className="text-2xl text-center">Результат</CardTitle>
 
         <div className="flex items-center justify-center gap-2">
-          <Button onClick={getResult}>Получить результат по пациенту</Button>
+          <Button onClick={getResult}>Получить результат</Button>
 
           {!!resultArea.length && (
             <Button
@@ -100,7 +118,7 @@ export const ResultCard:FC<Props> = ({ selectedPatientId }) => {
             Нажмите кнопку, чтобы получить результат.
           </div>
         ) : (
-          <>  
+          <>
             <div className="space-y-2">
               {summary.suitableNames.length > 0 && (
                 <div className="rounded-lg border bg-background p-3">
@@ -113,7 +131,7 @@ export const ResultCard:FC<Props> = ({ selectedPatientId }) => {
                     ))}
                   </div>
                 </div>
-              ) }
+              )}
 
               {summary.maybeNames.length > 0 && (
                 <div className="rounded-lg border bg-background p-3">
@@ -121,57 +139,59 @@ export const ResultCard:FC<Props> = ({ selectedPatientId }) => {
                     Могут подходить (на опыте эксперта):
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2">
-                     {summary.maybeNames.map((n) => (
+                    {summary.maybeNames.map((n) => (
                       <Badge key={n} variant="secondary">
-                    {n}
+                        {n}
                       </Badge>
                     ))}
                   </div>
                 </div>
               )}
 
-                  <>
+              <>
                 <Separator />
                 <div className="w-full">
-                  {resultArea.filter((a) =>  a.status !== "1").map((area) => {
-                    const title = area.answer ?? area.name_area ?? `Area ${area.id}`;
-                    return (
-                      <div key={String(area.id)} >
-
-                  {/* {JSON.stringify(area)} */}
-                        <div className="text-left">
-                          <div className="flex w-full items-center justify-between gap-3 pr-2">
-                            <div className="min-w-0">
-                              <div className="truncate font-medium">{title}</div>
-                              {/* <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                                <span className="truncate">{area.name_area}</span>
-                              </div> */}
-                            </div>
-
-                            <div className="shrink-0">
-                              <StatusBadge status={area.status} />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="space-y-2">
-                            {Array.isArray(area.explanation) && area.explanation.length > 0 ? (
-                              <ul className="list-disc pl-5 text-sm space-y-1">
-                                {area.explanation.map((line, idx) => (
-                                  <li key={idx}>{line}</li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <div className="text-sm text-muted-foreground">
-                                Нет пояснения для этой области.
+                  {resultArea
+                    .filter((a) => a.status !== "1")
+                    .map((area, idx) => {
+                      const title =
+                        area.answer ?? area.name_area ?? `Area ${area.id}`;
+                      return (
+                        <div key={String(area.id)}>
+                          {/* {JSON.stringify(area)} */}
+                          <div className="text-left">
+                            <div className="flex w-full items-center justify-between gap-3 pr-2">
+                              <div className="min-w-0">
+                                <div className="truncate font-medium">
+                                  {title}
+                                </div>
                               </div>
-                            )}
+
+                              <div className="shrink-0">
+                                <StatusBadge status={area.status} />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="space-y-2">
+                              {Array.isArray(area.explanation) &&
+                              area.explanation.length > 0 ? (
+                                <ul className="list-disc pl-5 text-sm space-y-1">
+                                  {area.explanation.map((line, idx) => (
+                                    <li key={idx}>{line}.   {quality[idx]}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <div className="text-sm text-muted-foreground">
+                                  Нет пояснения для этой области.
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               </>
             </div>
@@ -181,13 +201,19 @@ export const ResultCard:FC<Props> = ({ selectedPatientId }) => {
                 <Separator />
                 <Accordion type="single" collapsible className="w-full">
                   {resultArea.map((area) => {
-                    const title = area.answer ?? area.name_area ?? `Area ${area.id}`;
+                    const title =
+                      area.answer ?? area.name_area ?? `Area ${area.id}`;
                     return (
-                      <AccordionItem key={String(area.id)} value={String(area.id)}>
+                      <AccordionItem
+                        key={String(area.id)}
+                        value={String(area.id)}
+                      >
                         <AccordionTrigger className="text-left">
                           <div className="flex w-full items-center justify-between gap-3 pr-2">
                             <div className="min-w-0">
-                              <div className="truncate font-medium">{title}</div>
+                              <div className="truncate font-medium">
+                                {title}
+                              </div>
                               {/* <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                                 <span className="truncate">{area.name_area}</span>
                               </div> */}
@@ -201,7 +227,8 @@ export const ResultCard:FC<Props> = ({ selectedPatientId }) => {
 
                         <AccordionContent>
                           <div className="space-y-2">
-                            {Array.isArray(area.explanation) && area.explanation.length > 0 ? (
+                            {Array.isArray(area.explanation) &&
+                            area.explanation.length > 0 ? (
                               <ul className="list-disc pl-5 text-sm space-y-1">
                                 {area.explanation.map((line, idx) => (
                                   <li key={idx}>{line}</li>

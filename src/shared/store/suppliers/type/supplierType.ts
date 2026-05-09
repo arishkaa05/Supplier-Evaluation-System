@@ -1,14 +1,17 @@
- 
-export type Supplier = {
-  supplier: string
-  id: number
-  data: {
-    quality: Record<keyof Correlations, QualityValue>;
+export type quality = Record<keyof Correlations, QualityValue>
+
+export type SupplierData =  {
+    quality: quality;
     month:number
     localHiring: number, 
     completeness: number
     defects: number
-  }[]
+  }
+
+export type Supplier = {
+  supplier: string
+  id: number
+  data:SupplierData[]
 };
 
 export interface SupplierState {
