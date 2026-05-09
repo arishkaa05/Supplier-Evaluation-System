@@ -1,4 +1,4 @@
- import { FuzzyResultTable } from "@/feature/calculations";
+ import { FuzzyResultTable, SupplierEvaluation } from "@/feature/calculations";
 import { areas, symptomsByParamId } from "@/shared/config/data/preparingknowledgeBase";
 import result from "@/feature/calculations/model/math";
 import { useState, useMemo, FC, useEffect } from "react";
@@ -19,6 +19,8 @@ const Dashboards = () => {
         <h4 className="text-4xl font-bold">Дашборды</h4>
       </div>
       <FuzzyResultTable />
+
+      <SupplierEvaluation />
 
       <ResultCard />
     </div>

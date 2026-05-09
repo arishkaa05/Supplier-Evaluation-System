@@ -1,2 +1,3 @@
 import { FuzzyResultTable } from "./ui/FuzzyResultTable";
-export { FuzzyResultTable };
+import { SupplierEvaluation } from "./ui/SupplierEvaluation";
+export { FuzzyResultTable, SupplierEvaluation };
