@@ -18,8 +18,9 @@ export type SupplierEvaluation = {
   zone: Zone;
   zoneLabel: string;
   zoneDescription: string;
-  contributingRules: number;
-  weightSum: number;
+  activatedRules: number;
+  entropy: number;
+  trendShare: { positive: number; negative: number };
 };
 
 const ZONE_META: Record<Zone, { label: string; description: string }> = {
@@ -44,27 +45,38 @@ export function classifyZone(score: number): Zone {
 }
 
 export function aggregateSupplierScore(rules: FiredRule[]): SupplierEvaluation {
-  let num = 0;
-  let den = 0;
-  let contributing = 0;
+  const N = rules.length;
 
+  // Formula (13): y* = Σ φ(B'_n) / N — простое арифметическое среднее.
+  const score =
+    N > 0 ? rules.reduce((s, r) => s + r.crispAssessment, 0) / N : 0;
+
+  // Formula (12): Shannon-entropy of normalized crisp values, scaled to [0,1].
+  let entropy = 0;
+  if (N > 1) {
+    const sum = rules.reduce((s, r) => s + Math.max(0, r.crispAssessment), 0);
+    if (sum > 0) {
+      const lnN = Math.log(N);
+      let h = 0;
+      for (const r of rules) {
+        const p = Math.max(0, r.crispAssessment) / sum;
+        if (p > 0) h += p * Math.log(p);
+      }
+      entropy = -h / lnN;
+    }
+  }
+
+  // Trend share — доля правил с положительным/отрицательным направлением вывода.
+  let pos = 0;
+  let neg = 0;
   for (const r of rules) {
-    const w = Math.abs(r.firingStrength);
-    if (w <= 0) continue;
-    num += w * r.crispAssessment;
-    den += w;
-    contributing += 1;
+    if (r.assessment.trend === "up") pos += 1;
+    else neg += 1;
   }
-
-  let score: number;
-  if (den > 0) {
-    score = num / den;
-  } else if (rules.length > 0) {
-    score = rules.reduce((s, r) => s + r.crispAssessment, 0) / rules.length;
-    contributing = rules.length;
-  } else {
-    score = 0;
-  }
+  const trendShare =
+    N > 0
+      ? { positive: pos / N, negative: neg / N }
+      : { positive: 0, negative: 0 };
 
   const clamped = Math.max(0, Math.min(100, score));
   const zone = classifyZone(clamped);
@@ -74,7 +86,8 @@ export function aggregateSupplierScore(rules: FiredRule[]): SupplierEvaluation {
     zone,
     zoneLabel: ZONE_META[zone].label,
     zoneDescription: ZONE_META[zone].description,
-    contributingRules: contributing,
-    weightSum: den,
+    activatedRules: N,
+    entropy,
+    trendShare,
   };
 }
