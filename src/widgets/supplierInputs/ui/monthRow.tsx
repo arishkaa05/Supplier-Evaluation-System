@@ -86,7 +86,7 @@ export const MonthRow: React.FC<MonthRowProps> = ({
                 className="w-full rounded-lg border border-slate-300 px-2 py-1"
               />
 
-              {isLast && (
+              {/* {isLast && ( */}
                 <div className="rounded-lg border border-slate-200 bg-white p-2">
                   <div className="text-xs text-slate-500 mb-2">Достоверность</div>
 
@@ -113,7 +113,7 @@ export const MonthRow: React.FC<MonthRowProps> = ({
                     ))}
                   </div>
                 </div>
-              )}
+              {/* )} */}
             </div>
           );
         })}

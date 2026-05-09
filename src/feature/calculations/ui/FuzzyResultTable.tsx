@@ -23,7 +23,7 @@ export const FuzzyResultTable = () => {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">
-              Data on cooperation with suppliers A and B
+             Сравнение интеллектуальных систем 
             </h2>
           </div>
         </div>
@@ -39,23 +39,23 @@ export const FuzzyResultTable = () => {
                 <thead className="sticky top-0 z-10 bg-slate-50">
                   <tr className="text-xs text-slate-600 uppercase tracking-wide">
                     <th className="px-3 py-2 border-b border-slate-200 text-center whitespace-nowrap">
-                      № rule
+                      №
                     </th>
                     <th className="px-3 py-2 border-b border-slate-200 text-center whitespace-nowrap">
-                      Local Hiring
+                      Наём местных жителей
                     </th>
                     <th className="px-3 py-2 border-b border-slate-200 text-center whitespace-nowrap">
-                      Completeness
+                      Полнота заказа
                     </th>
                     <th className="px-3 py-2 border-b border-slate-200 text-center whitespace-nowrap">
-                      Defects
+                      Дефекты
                     </th>
                     <th className="px-3 py-2 border-b border-slate-200 text-center whitespace-nowrap">
-                      Assessment
+                      Результат
                     </th>
-                    <th className="px-3 py-2 border-b border-slate-200 text-center whitespace-nowrap">
+                    {/* <th className="px-3 py-2 border-b border-slate-200 text-center whitespace-nowrap">
                       Crisp Assessment
-                    </th>
+                    </th> */}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -84,9 +84,9 @@ export const FuzzyResultTable = () => {
                       <td className="text-center px-3 py-1 whitespace-nowrap">
                  {formatTerm(rule.assessment)}
                       </td>
-                      <td className="text-center px-3 py-1 whitespace-nowrap">
+                      {/* <td className="text-center px-3 py-1 whitespace-nowrap">
                         {rule.crispAssessment.toFixed(2)}
-                      </td>
+                      </td> */}
                     </tr>
                   ))}
                 </tbody>

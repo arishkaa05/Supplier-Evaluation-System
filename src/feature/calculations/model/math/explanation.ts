@@ -10,7 +10,7 @@ export const explanationSymptom = (status, term, symptom_name) => {
     "7": ""
   }
   term["explanation"] = [explanationSymptomModel[status]];
-}
+} 
 
 export const explanationSolveForArea = (solve, name) => {
   const explanationAreaModel = {
@@ -24,6 +24,15 @@ export const explanationSolveForArea = (solve, name) => {
     "7": `Для уточнения правила ${name} требуется дополнительная информация`
   }
   return explanationAreaModel[solve];
+}
+
+export const explanationSolveForQuality = (quality) => {
+  const explanationQualityModel = { 
+    "1": `Направление определяется точно`,
+    "2": `Основываясь на опыте эксперта можно сказать, что направление определено верно`,
+    "3": `Невозможно точно определить направление для правила`
+  }
+  return explanationQualityModel[quality];
 }
 
 export const explanationMetaoperation = (term) => {
