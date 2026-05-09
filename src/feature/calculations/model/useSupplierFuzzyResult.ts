@@ -4,14 +4,10 @@ import {
   knowledgeBase,
   localHiringDb, 
 } from "@/shared/config";
-import { Level, Trend } from "@/shared/config/data/type";
 import { useSupplierStore } from "@/shared/store/suppliers";
 import { Supplier} from "@/shared/store/suppliers/type/supplierType";
 import { useMemo } from "react";
-import {
-  CriterionTerm,
-  getActiveTermsForCriterion,
-} from "./getActiveTermsForCriterion";
+import { getActiveTermsForCriterion } from "./getActiveTermsForCriterion";
 import { RHO_DEFECTS, MU_DEFUZZ } from "./const";
 import { defuzzify } from "./defuzzify";
 import { directionDeterminantDown } from "./directionDeterminantDown";
@@ -19,6 +15,7 @@ import { directionDeterminantUp } from "./directionDeterminantUp";
 import { findOutputOFNForAssessment } from "./findOutputOFNForAssessment";
 import { findParamsForTerm } from "./findParamsForTerm";
 import { ofnShift } from "./ofnShift";
+import { aggregateSupplierScore, FiredRule } from "./aggregateScore";
 
 export function useSupplierRules() {
   const { supplier } = useSupplierStore();
@@ -29,17 +26,7 @@ export function useSupplierRules() {
       const completenessTerms = getActiveTermsForCriterion(s, completenessDb, "completeness");
       const defectsTerms = getActiveTermsForCriterion(s, defectsDb, "defects");
 
-      type RuleResult = {
-        no: number;
-        assessment: { level: Level; trend: Trend };
-        localHiring: CriterionTerm;
-        completeness: CriterionTerm;
-        defects: CriterionTerm; 
-        firingStrength: number;    
-        crispAssessment: number;    
-      };
-
-      const rules: RuleResult[] = [];
+      const rules: FiredRule[] = [];
 
       for (const lh of localHiringTerms) {
         for (const comp of completenessTerms) {
@@ -103,7 +90,9 @@ export function useSupplierRules() {
 
       rules.sort((a, b) => a.no - b.no);
 
-      return { supplier: s.supplier, rules };
+      const evaluation = aggregateSupplierScore(rules);
+
+      return { supplier: s.supplier, rules, evaluation };
     });
   }, [supplier]);
 }
