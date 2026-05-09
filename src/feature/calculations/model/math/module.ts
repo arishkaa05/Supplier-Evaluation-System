@@ -352,8 +352,23 @@ const getParametrsByPatient = (id: number) => {
   const cUp = completeness > -0.2;
   const dUp = defects > -0.2;
 
+  // Если данные по метрике отсутствуют ("0" или "3"), направление надёжно не
+  // определяется — активируем оба направления с exactly_parametr="3" (status 4).
+  const isMissing = (q: string) => q === "0" || q === "3";
+
   const parametrs = [];
-  if (lhUp) {
+  if (isMissing(qLh)) {
+    parametrs.push({
+      id: 1,
+      name_parametr: "local hiring↑",
+      patient_parametr: { value_parametr: last?.localHiring, exactly_parametr: "3" },
+    });
+    parametrs.push({
+      id: 4,
+      name_parametr: "local hiring↓",
+      patient_parametr: { value_parametr: last?.localHiring, exactly_parametr: "3" },
+    });
+  } else if (lhUp) {
     parametrs.push({
       id: 1,
       name_parametr: "local hiring↑",
@@ -382,7 +397,19 @@ const getParametrsByPatient = (id: number) => {
       },
     });
   }
-  if (cUp) {
+
+  if (isMissing(qC)) {
+    parametrs.push({
+      id: 2,
+      name_parametr: "completeness↑",
+      patient_parametr: { value_parametr: last?.completeness, exactly_parametr: "3" },
+    });
+    parametrs.push({
+      id: 5,
+      name_parametr: "completeness↓",
+      patient_parametr: { value_parametr: last?.completeness, exactly_parametr: "3" },
+    });
+  } else if (cUp) {
     parametrs.push({
       id: 2,
       name_parametr: "completeness↑",
@@ -411,7 +438,19 @@ const getParametrsByPatient = (id: number) => {
       },
     });
   }
-  if (dUp) {
+
+  if (isMissing(qD)) {
+    parametrs.push({
+      id: 3,
+      name_parametr: "defects↑",
+      patient_parametr: { value_parametr: last?.defects, exactly_parametr: "3" },
+    });
+    parametrs.push({
+      id: 6,
+      name_parametr: "defects↓",
+      patient_parametr: { value_parametr: last?.defects, exactly_parametr: "3" },
+    });
+  } else if (dUp) {
     parametrs.push({
       id: 3,
       name_parametr: "defects↑",

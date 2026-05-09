@@ -1,5 +1,5 @@
-import { CloudUpload } from "lucide-react";
-import { FC } from "react";
+import { CloudUpload, FileText, AlertTriangle } from "lucide-react";
+import { FC, useState, useCallback, DragEvent } from "react";
 import { useSupplierStore } from "@/shared/store/suppliers";
 import {
   MetricKey,
@@ -7,6 +7,7 @@ import {
   Supplier,
 } from "@/shared/store/suppliers/type/supplierType";
 import { cn } from "@/shared/lib/utils";
+import { parseSuppliersCsv } from "@/feature/csvImport/parseSuppliersCsv";
 
 const METRIC_LABEL: Record<MetricKey, string> = {
   localHiring: "Наём",
@@ -20,8 +21,73 @@ const METRIC_NOMINATIVE: Record<MetricKey, string> = {
   defects: "Дефекты",
 };
 
+// Месяцы 1..6 → 01.02.2025 .. 01.07.2025 (для поставщиков из стора без поля date).
+const formatMonthFallback = (m: number): string => {
+  const mm = String(m + 1).padStart(2, "0");
+  return `01.${mm}.2025`;
+};
+
 const Update = () => {
-  const { supplier } = useSupplierStore();
+  const { supplier, addSupplier } = useSupplierStore();
+
+  const [dragActive, setDragActive] = useState(false);
+  const [feedback, setFeedback] = useState<
+    | { kind: "ok"; text: string }
+    | { kind: "error"; text: string; details?: string[] }
+    | null
+  >(null);
+
+  const handleFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const list = Array.from(files);
+      const csvFiles = list.filter(
+        (f) => f.name.toLowerCase().endsWith(".csv") || f.type === "text/csv",
+      );
+      if (csvFiles.length === 0) {
+        setFeedback({ kind: "error", text: "Поддерживаются только CSV-файлы." });
+        return;
+      }
+
+      const allErrors: string[] = [];
+      let imported = 0;
+      let nextId = (supplier.at(-1)?.id ?? 0) + 1;
+
+      for (const file of csvFiles) {
+        const text = await file.text();
+        const result = parseSuppliersCsv(text, file.name, nextId);
+        if (result.supplier) {
+          addSupplier(result.supplier);
+          imported += 1;
+          nextId += 1;
+        }
+        if (result.errors.length > 0) {
+          allErrors.push(...result.errors.map((e) => `${file.name}: ${e}`));
+        }
+      }
+
+      if (imported > 0) {
+        setFeedback({
+          kind: "ok",
+          text: `Импортировано поставщиков: ${imported}.`,
+        });
+      } else {
+        setFeedback({
+          kind: "error",
+          text: "Не удалось импортировать ни одного поставщика.",
+          details: allErrors,
+        });
+      }
+    },
+    [addSupplier, supplier],
+  );
+
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
 
   return (
     <main className="w-full">
@@ -29,6 +95,73 @@ const Update = () => {
         <CloudUpload size={32} strokeWidth={1} className="text-slate-700" />
         <h4 className="text-2xl font-semibold">Обновить данные</h4>
       </div>
+
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragActive(true);
+        }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={onDrop}
+        className={cn(
+          "mb-6 rounded-2xl border-2 border-dashed p-6 text-center transition-colors",
+          dragActive
+            ? "border-slate-900 bg-slate-50"
+            : "border-slate-300 bg-white hover:border-slate-400",
+        )}
+      >
+        <FileText className="mx-auto mb-2 text-slate-500" size={28} />
+        <div className="text-sm font-medium">
+          Перетащите CSV-файлы сюда, чтобы добавить поставщиков
+        </div>
+        <div className="mt-1 text-xs text-slate-500">
+          Формат столбцов: дата (DD.MM.YYYY), наём, полнота, дефекты. Имя
+          поставщика берётся из имени файла. Пустые ячейки трактуются как
+          отсутствующие данные, дублирующиеся даты — как экспертно подтверждённые.
+        </div>
+        <label className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-sm cursor-pointer hover:bg-slate-800">
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                handleFiles(e.target.files);
+                e.target.value = "";
+              }
+            }}
+          />
+          Или выбрать файл
+        </label>
+      </div>
+
+      {feedback && (
+        <div
+          className={cn(
+            "mb-6 rounded-xl border p-3 text-sm",
+            feedback.kind === "ok"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-red-200 bg-red-50 text-red-800",
+          )}
+        >
+          <div className="flex items-start gap-2">
+            {feedback.kind === "error" && (
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            )}
+            <div>
+              <div>{feedback.text}</div>
+              {feedback.kind === "error" && feedback.details && feedback.details.length > 0 && (
+                <ul className="mt-1 text-xs list-disc pl-5">
+                  {feedback.details.slice(0, 8).map((d, i) => (
+                    <li key={i}>{d}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {supplier.map((sp) => (
@@ -90,7 +223,7 @@ const SupplierTable: FC<{ sp: Supplier }> = ({ sp }) => {
         <table className="w-full border-collapse text-sm">
           <thead className="bg-slate-50">
             <tr className="text-xs text-slate-600 uppercase tracking-wide">
-              <th className="px-3 py-2 border-b border-slate-200 text-center">Месяц</th>
+              <th className="px-3 py-2 border-b border-slate-200 text-center">Дата</th>
               <th className="px-3 py-2 border-b border-slate-200 text-center">
                 {METRIC_LABEL.localHiring}
               </th>
@@ -111,7 +244,9 @@ const SupplierTable: FC<{ sp: Supplier }> = ({ sp }) => {
               };
               return (
                 <tr key={row.month}>
-                  <td className="text-center px-3 py-1.5 font-medium">{row.month}</td>
+                  <td className="text-center px-3 py-1.5 font-medium whitespace-nowrap">
+                    {row.date ?? formatMonthFallback(row.month)}
+                  </td>
                   <ValueCell value={row.localHiring} quality={q.localHiring as Quality} />
                   <ValueCell value={row.completeness} quality={q.completeness as Quality} />
                   <ValueCell value={row.defects} quality={q.defects as Quality} />
