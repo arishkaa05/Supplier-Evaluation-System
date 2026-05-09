@@ -11,8 +11,10 @@ import { Supplier, MetricKey } from "@/shared/store/suppliers/type/supplierType"
   value: number;
 }
 
+// Formula (5) из статьи: r > -0.2 → положительное направление (up),
+// r ≤ -0.2 → отрицательное (down).
 function trendFromCorrelation(r: number): Trend {
-   return r > 0 ? "up" : "down";
+  return r > -0.2 ? "up" : "down";
 }
 
 export function getActiveTermsForCriterion(

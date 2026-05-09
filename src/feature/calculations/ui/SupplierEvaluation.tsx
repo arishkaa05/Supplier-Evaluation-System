@@ -73,10 +73,8 @@ export const SupplierEvaluation = () => {
           {supplierRules.map((sp) => {
             const ev = sp.evaluation;
             const s = ZONE_STYLES[ev.zone];
-            const fired = sp.rules.filter((r) => Math.abs(r.firingStrength) > 0);
-            const top = [...fired]
-              .sort((a, b) => Math.abs(b.firingStrength) - Math.abs(a.firingStrength))
-              .slice(0, 10);
+            const fired = sp.rules;
+            const top = [...fired].sort((a, b) => a.no - b.no);
 
             return (
               <div
@@ -113,15 +111,21 @@ export const SupplierEvaluation = () => {
                   </div>
 
                   <div className="mt-2 text-sm text-slate-600">
-                    {ev.zoneDescription}. Aggregated from {ev.contributingRules}{" "}
-                    activated rule{ev.contributingRules === 1 ? "" : "s"}{" "}
-                    (Σ|α| = {ev.weightSum.toFixed(3)}).
+                    {ev.zoneDescription}. Aggregated as the arithmetic mean
+                    over {ev.activatedRules} activated rule
+                    {ev.activatedRules === 1 ? "" : "s"} (formula 13).
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    Trends in assessment:{" "}
+                    {(ev.trendShare.positive * 100).toFixed(0)}% positive ·{" "}
+                    {(ev.trendShare.negative * 100).toFixed(0)}% negative.
+                    Entropy of crisp results: {ev.entropy.toFixed(4)}.
                   </div>
                 </div>
 
                 <div className="px-4 pb-4">
                   <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">
-                    Top contributing rules
+                    Activated rules
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-sm">
@@ -146,57 +150,45 @@ export const SupplierEvaluation = () => {
                             α (firing)
                           </th>
                           <th className="px-2 py-2 border-b border-slate-200 text-center">
-                            Crisp
+                            DA
                           </th>
                           <th className="px-2 py-2 border-b border-slate-200 text-center">
-                            α · crisp
+                            Crisp
                           </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
-                        {top.map((r) => {
-                          const w = Math.abs(r.firingStrength);
-                          return (
-                            <tr key={r.no} className="hover:bg-slate-50">
-                              <td className="text-center px-2 py-1">{r.no}</td>
-                              <td className="text-center px-2 py-1 whitespace-nowrap">
-                                {formatTerm(r.localHiring)}
-                              </td>
-                              <td className="text-center px-2 py-1 whitespace-nowrap">
-                                {formatTerm(r.completeness)}
-                              </td>
-                              <td className="text-center px-2 py-1 whitespace-nowrap">
-                                {formatTerm(r.defects)}
-                              </td>
-                              <td className="text-center px-2 py-1 whitespace-nowrap">
-                                {formatTerm(r.assessment)}
-                              </td>
-                              <td className="text-center px-2 py-1">
-                                {r.firingStrength.toFixed(3)}
-                              </td>
-                              <td className="text-center px-2 py-1">
-                                {r.crispAssessment.toFixed(2)}
-                              </td>
-                              <td className="text-center px-2 py-1">
-                                {(w * r.crispAssessment).toFixed(2)}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {top.map((r) => (
+                          <tr key={r.no} className="hover:bg-slate-50">
+                            <td className="text-center px-2 py-1">{r.no}</td>
+                            <td className="text-center px-2 py-1 whitespace-nowrap">
+                              {formatTerm(r.localHiring)}
+                            </td>
+                            <td className="text-center px-2 py-1 whitespace-nowrap">
+                              {formatTerm(r.completeness)}
+                            </td>
+                            <td className="text-center px-2 py-1 whitespace-nowrap">
+                              {formatTerm(r.defects)}
+                            </td>
+                            <td className="text-center px-2 py-1 whitespace-nowrap">
+                              {formatTerm(r.assessment)}
+                            </td>
+                            <td className="text-center px-2 py-1">
+                              {r.firingStrength.toFixed(4)}
+                            </td>
+                            <td className="text-center px-2 py-1">
+                              {r.crispAssessment.toFixed(4)}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                       <tfoot>
                         <tr className="bg-slate-50 font-semibold">
                           <td
                             className="text-right px-2 py-2 border-t border-slate-200"
-                            colSpan={5}
+                            colSpan={6}
                           >
-                            Final score = Σ(α · crisp) / Σα
-                          </td>
-                          <td
-                            className="text-center px-2 py-2 border-t border-slate-200"
-                            colSpan={2}
-                          >
-                            Σα = {ev.weightSum.toFixed(3)}
+                            Final assessment = Σ φ(B'ₙ) / N
                           </td>
                           <td
                             className={cn(
@@ -204,17 +196,11 @@ export const SupplierEvaluation = () => {
                               s.text,
                             )}
                           >
-                            {ev.finalScore.toFixed(2)}
+                            {ev.finalScore.toFixed(4)}
                           </td>
                         </tr>
                       </tfoot>
                     </table>
-                    {fired.length > top.length && (
-                      <div className="mt-2 text-xs text-slate-500">
-                        Showing {top.length} of {fired.length} activated rules
-                        (full set used in the aggregation).
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
