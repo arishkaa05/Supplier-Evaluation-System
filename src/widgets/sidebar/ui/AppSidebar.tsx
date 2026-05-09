@@ -13,7 +13,9 @@ export const AppSidebar = () => {
     <Sidebar>
       <SidebarHeader>
         <SidebarGroup>
-          <h4 className={"font-bold"}>ChemistryApp</h4>
+          <h4 className={"font-bold text-sm leading-snug"}>
+            Оценка поставщиков в&nbsp;управлении цепочками поставок
+          </h4>
         </SidebarGroup>
       </SidebarHeader>
 

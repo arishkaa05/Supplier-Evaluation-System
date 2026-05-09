@@ -3,7 +3,7 @@ import { paths } from "@/shared/config";
 
 export const navMap = [
   {
-    name: "Дашборды",
+    name: "Результаты работы систем",
     to: paths.app.dashboards.path,
     icon: <LayoutDashboard size={16} strokeWidth={1} />,
   },
