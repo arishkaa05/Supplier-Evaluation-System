@@ -15,6 +15,10 @@ import {
   aggregateMultiopScore,
   MultiopEvaluation,
 } from "@/feature/calculations/model/multiopFinalScore";
+import {
+  benchmarkSupplier,
+  BenchmarkRow,
+} from "@/feature/calculations/model/benchmark";
 import { knowledgeBase } from "@/shared/config";
 import { Level, Trend, KnowledgeBaseItem } from "@/shared/config/data/type";
 import { cn } from "@/shared/lib/utils";
@@ -137,6 +141,10 @@ const Dashboards = () => {
 
           <div className="mt-6">
             <EvaluationPanel evaluation={multiopEvaluation} />
+          </div>
+
+          <div className="mt-6">
+            <BenchmarkPanel supplier={activeSupplier} />
           </div>
         </>
       )}
@@ -284,6 +292,126 @@ const MultiopPanel: FC<{ areas: MultiopArea[] }> = ({ areas }) => {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+    </section>
+  );
+};
+
+const BenchmarkPanel: FC<{ supplier: import("@/shared/store/suppliers/type/supplierType").Supplier }> = ({ supplier }) => {
+  const [iterations, setIterations] = useState(200);
+  const [rows, setRows] = useState<BenchmarkRow[] | null>(null);
+  const [running, setRunning] = useState(false);
+
+  const run = () => {
+    setRunning(true);
+    setRows(null);
+    // даём React отрендерить «выполняется…» прежде чем начать blocking-цикл
+    setTimeout(() => {
+      try {
+        const r = benchmarkSupplier(supplier, iterations);
+        setRows(r);
+      } finally {
+        setRunning(false);
+      }
+    }, 16);
+  };
+
+  const fuzzy = rows?.find((r) => r.system === "fuzzy");
+  const multiop = rows?.find((r) => r.system === "multiop");
+  const ratio =
+    fuzzy && multiop && multiop.meanMs > 0
+      ? fuzzy.meanMs / multiop.meanMs
+      : null;
+
+  return (
+    <section className="bg-white border border-slate-200 rounded-2xl p-5">
+      <h2 className="text-lg font-semibold mb-2">Сравнение производительности</h2>
+      <p className="text-sm text-slate-500 mb-3">
+        Выполняет вывод обеих систем для текущего поставщика и измеряет среднее
+        время одного прогона. Чем длиннее история — тем заметнее разница.
+        Текущая история: {supplier.data.length} наблюдений.
+      </p>
+
+      <div className="flex items-center gap-3 mb-4">
+        <label className="text-sm text-slate-600">Итераций:</label>
+        <input
+          type="number"
+          min={10}
+          max={5000}
+          step={10}
+          value={iterations}
+          onChange={(e) => setIterations(Math.max(1, Number(e.target.value) || 1))}
+          className="w-24 px-2 py-1 border border-slate-300 rounded-md text-sm"
+        />
+        <button
+          type="button"
+          onClick={run}
+          disabled={running}
+          className={cn(
+            "px-3 py-1.5 rounded-lg text-sm font-medium",
+            running
+              ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+              : "bg-slate-900 text-white hover:bg-slate-800",
+          )}
+        >
+          {running ? "Выполняется…" : "Запустить замер"}
+        </button>
+      </div>
+
+      {rows && (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-slate-50">
+              <tr className="text-xs text-slate-600 uppercase tracking-wide">
+                <th className="px-2 py-2 border-b border-slate-200 text-left">Система</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-right">Итераций</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-right">Сумма, мс</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-right">Среднее, мс</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-right">Медиана, мс</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-right">Мин, мс</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-right">Макс, мс</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {rows.map((r) => (
+                <tr key={r.system}>
+                  <td className="px-2 py-1.5 font-medium">
+                    {r.system === "fuzzy"
+                      ? "Нечёткая логика (OFN)"
+                      : "Мультиоперации"}
+                  </td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{r.iterations}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{r.totalMs.toFixed(1)}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{r.meanMs.toFixed(3)}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{r.medianMs.toFixed(3)}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{r.minMs.toFixed(3)}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{r.maxMs.toFixed(3)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {ratio !== null && fuzzy && multiop && (
+            <div className="mt-3 text-sm text-slate-700">
+              {ratio > 1 ? (
+                <>
+                  Мультиоперационная система быстрее в{" "}
+                  <span className="font-semibold">{ratio.toFixed(2)}×</span>{" "}
+                  (среднее {multiop.meanMs.toFixed(3)} мс против{" "}
+                  {fuzzy.meanMs.toFixed(3)} мс у нечёткой).
+                </>
+              ) : (
+                <>
+                  Нечёткая система быстрее в{" "}
+                  <span className="font-semibold">
+                    {(1 / ratio).toFixed(2)}×
+                  </span>{" "}
+                  (среднее {fuzzy.meanMs.toFixed(3)} мс против{" "}
+                  {multiop.meanMs.toFixed(3)} мс у мультиоперационной).
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </section>

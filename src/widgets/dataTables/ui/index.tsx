@@ -1,10 +1,8 @@
- 
 import { KnowledgeBaseTable } from "./knowledgeBaseTable";
 import { LocalHiringTable } from "./localHiringTable";
 import { CompletenessTable } from "./completenessTable";
 import { DefectsTable } from "./defectsTable";
-import { AssesmentTable } from "./assesmentTable"; 
-import FormulasSection from "./formulasSection";
+import { AssesmentTable } from "./assesmentTable";
 
 export const DataTables = () => {
   return (
@@ -15,16 +13,9 @@ export const DataTables = () => {
         <div className="grid gap-6">
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
             <LocalHiringTable />
-
-           <CompletenessTable /> 
-
-           <DefectsTable />
-
-           <AssesmentTable />  
-
-           <FormulasSection />
-
-           
+            <CompletenessTable />
+            <DefectsTable />
+            <AssesmentTable />
           </div>
         </div>
       </div>
