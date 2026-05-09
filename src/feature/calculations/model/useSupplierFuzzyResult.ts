@@ -44,7 +44,8 @@ function detectBlockers(s: Supplier): FuzzyBlocker[] {
 
   for (const metric of metrics) {
     const qualities = s.data.map((d) => d.quality?.[metric] ?? "1");
-    const missing = qualities.filter((q) => q === "0").length;
+    // "0" — отсутствует, "3" — неизвестно/невалидно: оба требуют точного значения.
+    const missing = qualities.filter((q) => q === "0" || q === "3").length;
     const expert = qualities.filter((q) => q === "2").length;
 
     if (missing > 0) {

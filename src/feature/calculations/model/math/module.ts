@@ -312,9 +312,13 @@ const getParametrSymprom = (id: number) => {
   }
 };
 
-// Если хотя бы одно историческое наблюдение по метрике отсутствует — возвращаем "0",
-// если хотя бы одно задано экспертно — "2", иначе берём качество последнего месяца.
+// Агрегируем качество наблюдений по метрике:
+//   "3" — есть пропущенное/неизвестное → направление не может быть определено
+//   "0" — хотя бы одно "не квалифицировано экспертом"
+//   "2" — хотя бы одно задано экспертно
+//   иначе берём качество последнего месяца ("1" по умолчанию).
 const aggregatedQuality = (qualities: string[]): string => {
+  if (qualities.some((q) => q === "3")) return "3";
   if (qualities.some((q) => q === "0")) return "0";
   if (qualities.some((q) => q === "2")) return "2";
   return qualities[qualities.length - 1] ?? "1";
@@ -353,7 +357,20 @@ const getParametrsByPatient = (id: number) => {
   const dUp = defects > -0.2;
 
   const parametrs = [];
-  if (lhUp) {
+  // Если данные по метрике частично отсутствуют (qX === "3"), направление
+  // надёжно не определяется — активируем оба направления с exactly_parametr="3".
+  if (qLh === "3") {
+    parametrs.push({
+      id: 1,
+      name_parametr: "local hiring↑",
+      patient_parametr: { value_parametr: last?.localHiring, exactly_parametr: "3" },
+    });
+    parametrs.push({
+      id: 4,
+      name_parametr: "local hiring↓",
+      patient_parametr: { value_parametr: last?.localHiring, exactly_parametr: "3" },
+    });
+  } else if (lhUp) {
     parametrs.push({
       id: 1,
       name_parametr: "local hiring↑",
@@ -382,7 +399,18 @@ const getParametrsByPatient = (id: number) => {
       },
     });
   }
-  if (cUp) {
+  if (qC === "3") {
+    parametrs.push({
+      id: 2,
+      name_parametr: "completeness↑",
+      patient_parametr: { value_parametr: last?.completeness, exactly_parametr: "3" },
+    });
+    parametrs.push({
+      id: 5,
+      name_parametr: "completeness↓",
+      patient_parametr: { value_parametr: last?.completeness, exactly_parametr: "3" },
+    });
+  } else if (cUp) {
     parametrs.push({
       id: 2,
       name_parametr: "completeness↑",
@@ -411,7 +439,18 @@ const getParametrsByPatient = (id: number) => {
       },
     });
   }
-  if (dUp) {
+  if (qD === "3") {
+    parametrs.push({
+      id: 3,
+      name_parametr: "defects↑",
+      patient_parametr: { value_parametr: last?.defects, exactly_parametr: "3" },
+    });
+    parametrs.push({
+      id: 6,
+      name_parametr: "defects↓",
+      patient_parametr: { value_parametr: last?.defects, exactly_parametr: "3" },
+    });
+  } else if (dUp) {
     parametrs.push({
       id: 3,
       name_parametr: "defects↑",

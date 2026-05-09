@@ -11,6 +11,10 @@ import {
   STATUS_META,
   MultiopArea,
 } from "@/feature/calculations/model/multiopResult";
+import {
+  aggregateMultiopScore,
+  MultiopEvaluation,
+} from "@/feature/calculations/model/multiopFinalScore";
 import { Level, Trend } from "@/shared/config/data/type";
 import { cn } from "@/shared/lib/utils";
 
@@ -54,6 +58,20 @@ const TONE_STYLES: Record<string, string> = {
   gray: "bg-slate-50 text-slate-600 border-slate-300",
 };
 
+// Порядок сортировки правил мультиоперационной системы:
+//   2 — подходит, 6 — может подходить (эксперт), 4 — потенциально (нужно уточнение),
+//   5 — может не подходить, 3/7 — пограничные, 1 — не подходит, 0 — нет данных.
+const STATUS_ORDER: Record<string, number> = {
+  "2": 0,
+  "6": 1,
+  "4": 2,
+  "5": 3,
+  "3": 4,
+  "7": 5,
+  "1": 6,
+  "0": 7,
+};
+
 const Dashboards = () => {
   const { supplier } = useSupplierStore();
   const fuzzyResults = useSupplierRules();
@@ -69,6 +87,11 @@ const Dashboards = () => {
     if (!activeSupplier) return [];
     return runMultiopForSupplier(activeSupplier.id);
   }, [activeSupplier, supplier]);
+
+  const multiopEvaluation = useMemo<MultiopEvaluation | null>(
+    () => aggregateMultiopScore(multiop),
+    [multiop],
+  );
 
   return (
     <div>
@@ -103,7 +126,7 @@ const Dashboards = () => {
           </div>
 
           <div className="mt-6">
-            <EvaluationPanel result={activeFuzzy} />
+            <EvaluationPanel evaluation={multiopEvaluation} />
           </div>
         </>
       )}
@@ -145,27 +168,13 @@ const FuzzyPanel: FC<{ result: SupplierFuzzyResult }> = ({ result }) => {
           <table className="w-full border-collapse text-sm">
             <thead className="bg-slate-50">
               <tr className="text-xs text-slate-600 uppercase tracking-wide">
-                <th className="px-2 py-2 border-b border-slate-200 text-center">
-                  № правила
-                </th>
-                <th className="px-2 py-2 border-b border-slate-200 text-center">
-                  Наём
-                </th>
-                <th className="px-2 py-2 border-b border-slate-200 text-center">
-                  Полнота
-                </th>
-                <th className="px-2 py-2 border-b border-slate-200 text-center">
-                  Дефекты
-                </th>
-                <th className="px-2 py-2 border-b border-slate-200 text-center">
-                  Заключение
-                </th>
-                <th className="px-2 py-2 border-b border-slate-200 text-center">
-                  DA
-                </th>
-                <th className="px-2 py-2 border-b border-slate-200 text-center">
-                  Crisp
-                </th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">№ правила</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">Наём</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">Полнота</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">Дефекты</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">Заключение</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">DA</th>
+                <th className="px-2 py-2 border-b border-slate-200 text-center">Crisp</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -185,7 +194,7 @@ const FuzzyPanel: FC<{ result: SupplierFuzzyResult }> = ({ result }) => {
               <tfoot>
                 <tr className="bg-slate-50 font-semibold">
                   <td colSpan={6} className="text-right px-2 py-2 border-t border-slate-200">
-                    Итоговая оценка = Σ φ(B'ₙ) / N
+                    Σ φ(B'ₙ) / N (нечёткая система)
                   </td>
                   <td className="text-center px-2 py-2 border-t border-slate-200">
                     {result.evaluation.finalScore.toFixed(4)}
@@ -201,14 +210,57 @@ const FuzzyPanel: FC<{ result: SupplierFuzzyResult }> = ({ result }) => {
 };
 
 const MultiopPanel: FC<{ areas: MultiopArea[] }> = ({ areas }) => {
-  const relevant = areas.filter(
-    (a) => a.status !== "1" && a.status !== "0" && a.status !== "4",
+  // Сортируем по приоритету статуса: подходящие сверху, не подходящие — внизу.
+  const sorted = useMemo(() => {
+    return [...areas].sort((a, b) => {
+      const sa = STATUS_ORDER[String(a.status)] ?? 99;
+      const sb = STATUS_ORDER[String(b.status)] ?? 99;
+      if (sa !== sb) return sa - sb;
+      return Number(a.id) - Number(b.id);
+    });
+  }, [areas]);
+
+  const fitting = sorted.filter((a) => a.status === "2");
+  const maybe = sorted.filter((a) => a.status === "6");
+  const potential = sorted.filter((a) => a.status === "4");
+  const others = sorted.filter(
+    (a) => a.status !== "2" && a.status !== "6" && a.status !== "4" && a.status !== "0",
   );
-  const fitting = areas.filter((a) => a.status === "2");
-  const maybe = areas.filter((a) => a.status === "6");
-  const expertBased = areas.filter(
-    (a) => a.status === "5" || a.status === "6",
-  );
+  const noInfo = sorted.filter((a) => a.status === "0");
+
+  const isUnsuitable = (s: string) => s === "1" || s === "5" || s === "3";
+
+  const renderRow = (a: MultiopArea) => {
+    const status = String(a.status);
+    const meta = STATUS_META[status] ?? { label: `Статус ${status}`, tone: "gray" as const };
+    const subdued = isUnsuitable(status);
+    return (
+      <tr
+        key={String(a.id)}
+        className={cn(
+          "transition-colors",
+          subdued ? "bg-slate-50/50 text-slate-400" : "hover:bg-slate-50",
+        )}
+      >
+        <td className="px-2 py-1.5 whitespace-nowrap font-medium">
+          <div className="flex items-center gap-2">
+            <span>{a.name_area}</span>
+            <span
+              className={cn(
+                "px-2 py-0.5 rounded-md text-[10px] font-semibold border whitespace-nowrap",
+                TONE_STYLES[meta.tone],
+              )}
+            >
+              {meta.label}
+            </span>
+          </div>
+        </td>
+        <td className={cn("px-2 py-1.5 text-xs", subdued ? "text-slate-400" : "text-slate-600")}>
+          {a.answer ?? "—"}
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <section className="bg-white border border-slate-200 rounded-2xl p-5">
@@ -220,134 +272,90 @@ const MultiopPanel: FC<{ areas: MultiopArea[] }> = ({ areas }) => {
         конъюнкции/дизъюнкции/отрицания.
       </p>
 
-      {relevant.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+      {fitting.length === 0 && maybe.length === 0 && potential.length === 0 ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 mb-4">
           Подходящих правил не найдено: для большинства симптомов недостаточно
           данных.
         </div>
       ) : (
-        <>
-          {fitting.length > 0 && (
-            <div className="mb-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">
-                Подходящие правила
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {fitting.map((a) => (
-                  <span
-                    key={String(a.id)}
-                    className="px-2 py-1 rounded-md text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-300"
-                  >
-                    {a.name_area}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {maybe.length > 0 && (
-            <div className="mb-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">
-                Могут подходить (на опыте эксперта)
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {maybe.map((a) => (
-                  <span
-                    key={String(a.id)}
-                    className="px-2 py-1 rounded-md text-xs font-semibold border bg-yellow-50 text-yellow-800 border-yellow-300"
-                  >
-                    {a.name_area}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {expertBased.length > 0 && (
-            <p className="text-xs text-slate-500 mb-3">
-              Направления для части правил определены на основании опыта эксперта.
-            </p>
-          )}
-
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead className="bg-slate-50">
-                <tr className="text-xs text-slate-600 uppercase tracking-wide">
-                  <th className="px-2 py-2 border-b border-slate-200 text-center">
-                    Правило
-                  </th>
-                  <th className="px-2 py-2 border-b border-slate-200 text-center">
-                    Статус
-                  </th>
-                  <th className="px-2 py-2 border-b border-slate-200 text-left">
-                    Описание
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {relevant.map((a) => {
-                  const meta = STATUS_META[a.status] ?? {
-                    label: `Статус ${a.status}`,
-                    tone: "gray" as const,
-                  };
-                  return (
-                    <tr key={String(a.id)} className="hover:bg-slate-50">
-                      <td className="px-2 py-1 text-center whitespace-nowrap font-medium">
-                        {a.name_area}
-                      </td>
-                      <td className="px-2 py-1 text-center">
-                        <span
-                          className={cn(
-                            "px-2 py-0.5 rounded-md text-xs font-semibold border",
-                            TONE_STYLES[meta.tone],
-                          )}
-                        >
-                          {meta.label}
-                        </span>
-                      </td>
-                      <td className="px-2 py-1 text-left text-xs text-slate-600">
-                        {a.answer ?? "—"}
-                        {a.explanation && a.explanation.length > 0 && (
-                          <ul className="list-disc pl-5 mt-1 space-y-0.5">
-                            {a.explanation.map((line, i) => (
-                              <li key={i}>{line}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {fitting.map((a) => (
+            <span
+              key={String(a.id)}
+              className="px-2 py-1 rounded-md text-xs font-semibold border bg-emerald-50 text-emerald-700 border-emerald-300"
+            >
+              {a.name_area}
+            </span>
+          ))}
+          {maybe.map((a) => (
+            <span
+              key={String(a.id)}
+              className="px-2 py-1 rounded-md text-xs font-semibold border bg-yellow-50 text-yellow-800 border-yellow-300"
+            >
+              {a.name_area}
+            </span>
+          ))}
+          {potential.map((a) => (
+            <span
+              key={String(a.id)}
+              className="px-2 py-1 rounded-md text-xs font-semibold border bg-amber-50 text-amber-800 border-amber-300"
+            >
+              {a.name_area}
+            </span>
+          ))}
+        </div>
       )}
+
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead className="bg-slate-50">
+            <tr className="text-xs text-slate-600 uppercase tracking-wide">
+              <th className="px-2 py-2 border-b border-slate-200 text-left">Правило</th>
+              <th className="px-2 py-2 border-b border-slate-200 text-left">Описание</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {fitting.map(renderRow)}
+            {maybe.map(renderRow)}
+            {potential.map(renderRow)}
+            {others.map(renderRow)}
+            {noInfo.length > 0 && (
+              <tr>
+                <td colSpan={2} className="px-2 py-2 text-xs text-slate-400 italic">
+                  + {noInfo.length} правил без активации (информации недостаточно).
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 };
 
-const EvaluationPanel: FC<{ result: SupplierFuzzyResult }> = ({ result }) => {
-  if (result.status === "blocked" || !result.evaluation) {
+const EvaluationPanel: FC<{ evaluation: MultiopEvaluation | null }> = ({ evaluation }) => {
+  if (!evaluation) {
     return (
       <section className="bg-white border border-slate-200 rounded-2xl p-5">
         <h2 className="text-lg font-semibold mb-2">Итоговая оценка поставщика</h2>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          Итоговый числовой балл нечёткой системой не сформирован: для расчёта
-          необходимы полные исторические данные с определёнными направлениями
-          трендов. Используйте результат мультиоперационной системы как набор
-          согласованных правил-гипотез.
+          Оценка не сформирована: ни одно правило мультиоперационной системы не
+          подтверждается данными поставщика. Уточните недостающие наблюдения.
         </div>
       </section>
     );
   }
 
-  const ev = result.evaluation;
-  const s = ZONE_STYLES[ev.zone];
+  const s = ZONE_STYLES[evaluation.zone];
 
   return (
     <section className="bg-white border border-slate-200 rounded-2xl p-5">
       <h2 className="text-lg font-semibold mb-3">Итоговая оценка поставщика</h2>
+      <p className="text-sm text-slate-500 mb-4">
+        Оценка рассчитана по правилам, активированным в мультиоперационной системе
+        (взвешена по статусу: подходит — 1.0, может подходить — 0.7, потенциально
+        применимо — 0.4, может не подходить — 0.3).
+      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         {(Object.keys(ZONE_STYLES) as Zone[]).map((z) => {
@@ -372,7 +380,7 @@ const EvaluationPanel: FC<{ result: SupplierFuzzyResult }> = ({ result }) => {
 
       <div className="flex items-end gap-3">
         <div className={cn("text-5xl font-bold", s.text)}>
-          {ev.finalScore.toFixed(2)}
+          {evaluation.finalScore.toFixed(2)}
         </div>
         <div className="text-sm text-slate-500 pb-2">из 100</div>
         <div
@@ -388,15 +396,13 @@ const EvaluationPanel: FC<{ result: SupplierFuzzyResult }> = ({ result }) => {
       </div>
 
       <div className="mt-3 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-        <div className={cn("h-full", s.bar)} style={{ width: `${ev.finalScore}%` }} />
+        <div className={cn("h-full", s.bar)} style={{ width: `${evaluation.finalScore}%` }} />
       </div>
 
       <div className="mt-3 text-sm text-slate-600">
-        {s.description}. Среднее по {ev.activatedRules}{" "}
-        активированным правилам (формула 13). Тренды направлений:{" "}
-        {(ev.trendShare.positive * 100).toFixed(0)}% положительных,{" "}
-        {(ev.trendShare.negative * 100).toFixed(0)}% отрицательных. Энтропия
-        результатов: {ev.entropy.toFixed(4)}.
+        {evaluation.zoneDescription}. В агрегации участвует{" "}
+        {evaluation.contributingRules} из {evaluation.totalActivated} активированных
+        правил, суммарный вес = {evaluation.weightSum.toFixed(2)}.
       </div>
     </section>
   );
