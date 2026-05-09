@@ -43,4 +43,6 @@ export type Correlations = {
 };
 
 export type MetricKey = keyof Correlations;  
- export type QualityValue = "1" | "2" | "3";
+// "0" — наблюдение отсутствует, "1" — точное значение,
+// "2" — задано на основании опыта эксперта, "3" — неизвестно.
+export type QualityValue = "0" | "1" | "2" | "3";

@@ -312,6 +312,18 @@ const getParametrSymprom = (id: number) => {
   }
 };
 
+// Агрегируем качество наблюдений по метрике:
+//   "3" — есть пропущенное/неизвестное → направление не может быть определено
+//   "0" — хотя бы одно "не квалифицировано экспертом"
+//   "2" — хотя бы одно задано экспертно
+//   иначе берём качество последнего месяца ("1" по умолчанию).
+const aggregatedQuality = (qualities: string[]): string => {
+  if (qualities.some((q) => q === "3")) return "3";
+  if (qualities.some((q) => q === "0")) return "0";
+  if (qualities.some((q) => q === "2")) return "2";
+  return qualities[qualities.length - 1] ?? "1";
+};
+
 const getParametrsByPatient = (id: number) => {
   const supplier = useSupplierStore
     .getState()
@@ -335,110 +347,135 @@ const getParametrsByPatient = (id: number) => {
   );
   const last = supplier?.data[supplier?.data.length - 1];
 
-  console.log({ localHiring, completeness, defects });
+  const qLh = aggregatedQuality(data.map((d) => d.quality?.localHiring ?? "1"));
+  const qC = aggregatedQuality(data.map((d) => d.quality?.completeness ?? "1"));
+  const qD = aggregatedQuality(data.map((d) => d.quality?.defects ?? "1"));
+
+  // Formula (5): up when r > -0.2, иначе down.
+  const lhUp = localHiring > -0.2;
+  const cUp = completeness > -0.2;
+  const dUp = defects > -0.2;
+
   const parametrs = [];
-  if (localHiring > 0.2) {
+  // Если данные по метрике частично отсутствуют (qX === "3"), направление
+  // надёжно не определяется — активируем оба направления с exactly_parametr="3".
+  if (qLh === "3") {
+    parametrs.push({
+      id: 1,
+      name_parametr: "local hiring↑",
+      patient_parametr: { value_parametr: last?.localHiring, exactly_parametr: "3" },
+    });
+    parametrs.push({
+      id: 4,
+      name_parametr: "local hiring↓",
+      patient_parametr: { value_parametr: last?.localHiring, exactly_parametr: "3" },
+    });
+  } else if (lhUp) {
     parametrs.push({
       id: 1,
       name_parametr: "local hiring↑",
       patient_parametr: {
         value_parametr: last?.localHiring,
-        exactly_parametr: last?.quality?.localHiring,
+        exactly_parametr: qLh,
       },
     });
     parametrs.push({
       id: 4,
       name_parametr: "local hiring↓",
-      patient_parametr: {
-        value_parametr: null,
-        exactly_parametr: 1,
-      },
+      patient_parametr: { value_parametr: null, exactly_parametr: "1" },
     });
   } else {
     parametrs.push({
       id: 1,
       name_parametr: "local hiring↑",
-      patient_parametr: {
-        value_parametr: null,
-        exactly_parametr: 1,
-      },
+      patient_parametr: { value_parametr: null, exactly_parametr: "1" },
     });
     parametrs.push({
       id: 4,
       name_parametr: "local hiring↓",
       patient_parametr: {
         value_parametr: last?.localHiring,
-        exactly_parametr: last?.quality?.localHiring,
+        exactly_parametr: qLh,
       },
     });
   }
-  if (completeness > 0.2) {
+  if (qC === "3") {
+    parametrs.push({
+      id: 2,
+      name_parametr: "completeness↑",
+      patient_parametr: { value_parametr: last?.completeness, exactly_parametr: "3" },
+    });
+    parametrs.push({
+      id: 5,
+      name_parametr: "completeness↓",
+      patient_parametr: { value_parametr: last?.completeness, exactly_parametr: "3" },
+    });
+  } else if (cUp) {
     parametrs.push({
       id: 2,
       name_parametr: "completeness↑",
       patient_parametr: {
         value_parametr: last?.completeness,
-        exactly_parametr: last?.quality?.completeness,
+        exactly_parametr: qC,
       },
     });
     parametrs.push({
       id: 5,
       name_parametr: "completeness↓",
-      patient_parametr: {
-        value_parametr: null,
-        exactly_parametr: 1,
-      },
+      patient_parametr: { value_parametr: null, exactly_parametr: "1" },
     });
   } else {
     parametrs.push({
       id: 2,
       name_parametr: "completeness↑",
-      patient_parametr: {
-        value_parametr: null,
-        exactly_parametr: null,
-      },
+      patient_parametr: { value_parametr: null, exactly_parametr: "1" },
     });
     parametrs.push({
       id: 5,
       name_parametr: "completeness↓",
       patient_parametr: {
         value_parametr: last?.completeness,
-        exactly_parametr: last?.quality?.completeness,
+        exactly_parametr: qC,
       },
     });
   }
-  if (defects > 0.2) {
+  if (qD === "3") {
+    parametrs.push({
+      id: 3,
+      name_parametr: "defects↑",
+      patient_parametr: { value_parametr: last?.defects, exactly_parametr: "3" },
+    });
+    parametrs.push({
+      id: 6,
+      name_parametr: "defects↓",
+      patient_parametr: { value_parametr: last?.defects, exactly_parametr: "3" },
+    });
+  } else if (dUp) {
     parametrs.push({
       id: 3,
       name_parametr: "defects↑",
       patient_parametr: {
         value_parametr: last?.defects,
-        exactly_parametr: last?.quality?.defects,
+        exactly_parametr: qD,
       },
     });
     parametrs.push({
       id: 6,
       name_parametr: "defects↓",
-      patient_parametr: {
-        value_parametr: null,
-        exactly_parametr: 1,
-      },
+      patient_parametr: { value_parametr: null, exactly_parametr: "1" },
     });
   } else {
     parametrs.push({
       id: 3,
       name_parametr: "defects↑",
-      patient_parametr: {
-        value_parametr: null,
-        exactly_parametr: 1,
-      },
+      patient_parametr: { value_parametr: null, exactly_parametr: "1" },
     });
     parametrs.push({
       id: 6,
       name_parametr: "defects↓",
       patient_parametr: {
         value_parametr: last?.defects,
-        exactly_parametr: last?.quality?.defects,
+        exactly_parametr: qD,
       },
     });
   }
