@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { paths } from "@/shared/config";
 import { Layout } from "@/app/layout";
+import { DashboardsIndexRedirect } from "./dashboards/IndexRedirect";
 
 const createRouter = () =>
   createBrowserRouter([
@@ -10,7 +11,12 @@ const createRouter = () =>
       element: <Layout />,
       children: [
         {
-          path: paths.app.dashboards.path,
+          // На корне выбираем первого поставщика и редиректим на /dashboards/:id.
+          index: true,
+          element: <DashboardsIndexRedirect />,
+        },
+        {
+          path: paths.app.supplierDashboard.path,
           lazy: async () => {
             const dashboard = await import("./dashboards/index");
             return { element: <dashboard.default /> };
