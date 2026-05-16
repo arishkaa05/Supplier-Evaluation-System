@@ -1,6 +1,6 @@
 import { CriterionDbTable } from "./type";
  
-export const localHiringDb: CriterionDbTable = {
+export let localHiringDb: CriterionDbTable = {
   name: "Local hiring",
   range: [50, 100],
   impactFactor: 0.2,
@@ -43,4 +43,8 @@ export const localHiringDb: CriterionDbTable = {
       parameters: [100.1, 100, 100, 75],
     },
   ],
+};
+
+export const setLocalHiringDb = (next: CriterionDbTable) => {
+  localHiringDb = next;
 };

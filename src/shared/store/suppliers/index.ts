@@ -5,6 +5,7 @@ import {
   MetricKey,
   QualityValue,
 } from "./type/supplierType";
+import * as api from "@/shared/api/endpoints";
 
 const defaultQuality = (): Record<MetricKey, QualityValue> => ({
   localHiring: "1",
@@ -12,166 +13,51 @@ const defaultQuality = (): Record<MetricKey, QualityValue> => ({
   defects: "1",
 });
 
-export const useSupplierStore = create<SupplierState>((set) => ({
-  supplier: [
-    {
-      id: 1,
-      supplier: "Поставщик №1",
-      data: [
-        {
-          month: 1,
-          localHiring: 72,
-          completeness: 80,
-          defects: 15,
-          quality: defaultQuality(),
-        },
-        {
-          month: 2,
-          localHiring: 71,
-          completeness: 85,
-          defects: 10,
-          quality: defaultQuality(),
-        },
-        {
-          month: 3,
-          localHiring: 80,
-          completeness: 90,
-          defects: 10,
-          quality: defaultQuality(),
-        },
-        {
-          month: 4,
-          localHiring: 88,
-          completeness: 84,
-          defects: 12,
-          quality: defaultQuality(),
-        },
-        {
-          month: 5,
-          localHiring: 88,
-          completeness: 90,
-          defects: 9,
-          quality: defaultQuality(),
-        },
-        {
-          month: 6,
-          localHiring: 90,
-          completeness: 91,
-          defects: 4,
-          quality: defaultQuality(),
-        },
-      ],
-    },
-    {
-      id: 2,
-      supplier: "Поставщик №2",
-      // Часть исторических наблюдений по дефектам отсутствует (quality="3").
-      data: [
-        {
-          month: 1,
-          localHiring: 72,
-          completeness: 91,
-          defects: 0,
-          quality: { localHiring: "1", completeness: "1", defects: "0" },
-        },
-        {
-          month: 2,
-          localHiring: 71,
-          completeness: 85,
-          defects: 0,
-          quality: { localHiring: "1", completeness: "1", defects: "0" },
-        },
-        {
-          month: 3,
-          localHiring: 68,
-          completeness: 82,
-          defects: 0,
-          quality: { localHiring: "1", completeness: "1", defects: "0" },
-        },
-        {
-          month: 4,
-          localHiring: 73,
-          completeness: 84,
-          defects: 10,
-          quality: defaultQuality(),
-        },
-        {
-          month: 5,
-          localHiring: 68,
-          completeness: 83,
-          defects: 8,
-          quality: defaultQuality(),
-        },
-        {
-          month: 6,
-          localHiring: 67,
-          completeness: 89,
-          defects: 12,
-          quality: defaultQuality(),
-        },
-      ],
-    },
-    {
-      id: 3,
-      supplier: "Поставщик №3",
-      // Часть исторических значений задана на основании опыта эксперта (quality="2").
-      data: [
-        {
-          month: 1,
-          localHiring: 97,
-          completeness: 92,
-          defects: 15,
-          quality: { localHiring: "2", completeness: "1", defects: "1" },
-        },
-        {
-          month: 2,
-          localHiring: 90,
-          completeness: 95,
-          defects: 10,
-          quality: defaultQuality(),
-        },
-        {
-          month: 3,
-          localHiring: 80,
-          completeness: 90,
-          defects: 10,
-          quality: { localHiring: "1", completeness: "1", defects: "2" },
-        },
-        {
-          month: 4,
-          localHiring: 84,
-          completeness: 85,
-          defects: 12,
-          quality: { localHiring: "2", completeness: "1", defects: "2" },
-        },
-        {
-          month: 5,
-          localHiring: 70,
-          completeness: 90,
-          defects: 9,
-          quality: { localHiring: "2", completeness: "1", defects: "2" },
-        },
-        {
-          month: 6,
-          localHiring: 90,
-          completeness: 91,
-          defects: 4,
-          quality: defaultQuality(),
-        },
-      ],
-    },
-  ],
+const METRIC_TO_FIELD: Record<MetricKey, "local_hiring" | "completeness" | "defects"> = {
+  localHiring: "local_hiring",
+  completeness: "completeness",
+  defects: "defects",
+};
+
+const METRIC_TO_QUALITY_FIELD: Record<
+  MetricKey,
+  "quality_local_hiring" | "quality_completeness" | "quality_defects"
+> = {
+  localHiring: "quality_local_hiring",
+  completeness: "quality_completeness",
+  defects: "quality_defects",
+};
+
+const logApiError = (op: string) => (e: unknown) => {
+  console.error(`[supplierStore] ${op} failed:`, e);
+};
+
+// Локальное состояние пустое — наполняется bootstrap() из @/shared/api/bootstrap.
+// Мутации применяются оптимистично и параллельно отправляются на сервер.
+export const useSupplierStore = create<SupplierState>((set, get) => ({
+  supplier: [],
 
   addSupplier: (supplier: Supplier) => {
-    set((state) => ({
-      supplier: [...state.supplier, supplier],
-    }));
+    set((state) => ({ supplier: [...state.supplier, supplier] }));
+    api
+      .createSupplier(supplier.supplier)
+      .then((created) => {
+        // Подменяем id на серверный, чтобы последующие upsert наблюдений ссылались верно.
+        set((state) => ({
+          supplier: state.supplier.map((s) =>
+            s.supplier === supplier.supplier ? { ...s, id: created.id } : s,
+          ),
+        }));
+      })
+      .catch(logApiError("createSupplier"));
   },
 
   deleteSupplier: (supplier: Supplier) => {
+    const target = get().supplier.find((s) => s.supplier === supplier.supplier);
     set((state) => ({
       supplier: state.supplier.filter((s) => s.supplier !== supplier.supplier),
     }));
+    if (target) api.deleteSupplier(target.id).catch(logApiError("deleteSupplier"));
   },
 
   removeMonth: (month: number) => {
@@ -181,6 +67,7 @@ export const useSupplierStore = create<SupplierState>((set) => ({
         data: s.data.filter((d) => d.month !== month),
       })),
     }));
+    api.removeMonth(month).catch(logApiError("removeMonth"));
   },
 
   updateSupplierMetric: (supplierName, month, metric, value) => {
@@ -196,7 +83,17 @@ export const useSupplierStore = create<SupplierState>((set) => ({
           : s,
       ),
     }));
+    const target = get().supplier.find((s) => s.supplier === supplierName);
+    if (!target) return;
+    api
+      .upsertObservation({
+        supplierId: target.id,
+        month,
+        [METRIC_TO_FIELD[metric]]: value,
+      })
+      .catch(logApiError("upsertObservation"));
   },
+
   updateSupplierQuality: (supplierName, month, metric, value) => {
     set((state) => ({
       supplier: state.supplier.map((s) =>
@@ -218,6 +115,15 @@ export const useSupplierStore = create<SupplierState>((set) => ({
           : s,
       ),
     }));
+    const target = get().supplier.find((s) => s.supplier === supplierName);
+    if (!target) return;
+    api
+      .upsertObservation({
+        supplierId: target.id,
+        month,
+        [METRIC_TO_QUALITY_FIELD[metric]]: value,
+      })
+      .catch(logApiError("upsertObservation(quality)"));
   },
 
   addMonth: (month: number) => {
@@ -239,5 +145,6 @@ export const useSupplierStore = create<SupplierState>((set) => ({
         };
       }),
     }));
+    api.addMonth(month).catch(logApiError("addMonth"));
   },
 }));

@@ -1,6 +1,6 @@
 import { CriterionDbTable } from "./type";
 
-export const defectsDb: CriterionDbTable = {
+export let defectsDb: CriterionDbTable = {
   name: "Defects",
   range: [0, 30],
   impactFactor: 0.25,
@@ -44,4 +44,8 @@ export const defectsDb: CriterionDbTable = {
       parameters: [30.1, 30, 30, 20],
     },
   ],
+};
+
+export const setDefectsDb = (next: CriterionDbTable) => {
+  defectsDb = next;
 };

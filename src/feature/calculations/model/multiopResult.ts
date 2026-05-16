@@ -1,23 +1,20 @@
-import result from "./math/module";
+// Тонкая обёртка над серверными результатами мультиопераций.
+// Сами расчёты выполняются в server_system/src/calc/multiop/.
 
-export type MultiopArea = {
-  id: number | string;
-  name_area: string;
-  status: string;
-  answer?: string;
-  explanation?: string[];
-};
+import { useEvaluationStore, MultiopArea } from "@/shared/store/evaluation";
+import { useSupplierStore } from "@/shared/store/suppliers";
+
+export type { MultiopArea } from "@/shared/store/evaluation";
 
 export function runMultiopForSupplier(supplierId: number): MultiopArea[] {
-  const out = result(supplierId) as MultiopArea[] | unknown;
-  if (!Array.isArray(out)) return [];
-  return out.map((a) => ({
-    id: a.id,
-    name_area: a.name_area,
-    status: String(a.status ?? ""),
-    answer: a.answer,
-    explanation: Array.isArray(a.explanation) ? [...a.explanation] : undefined,
-  }));
+  const supplier = useSupplierStore
+    .getState()
+    .supplier.find((s) => s.id === supplierId);
+  if (!supplier) return [];
+  const result = useEvaluationStore
+    .getState()
+    .multiop.find((r) => r.supplier === supplier.supplier);
+  return result?.areas ?? [];
 }
 
 export const STATUS_META: Record<
