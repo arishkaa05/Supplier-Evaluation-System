@@ -39,17 +39,32 @@ export const useSupplierStore = create<SupplierState>((set, get) => ({
 
   addSupplier: (supplier: Supplier) => {
     set((state) => ({ supplier: [...state.supplier, supplier] }));
-    api
-      .createSupplier(supplier.supplier)
-      .then((created) => {
-        // Подменяем id на серверный, чтобы последующие upsert наблюдений ссылались верно.
+    // Создаём поставщика на сервере и заливаем все наблюдения, иначе после
+    // следующего bootstrap данные импорта (например, из CSV) будут потеряны.
+    (async () => {
+      try {
+        const created = await api.createSupplier(supplier.supplier);
         set((state) => ({
           supplier: state.supplier.map((s) =>
             s.supplier === supplier.supplier ? { ...s, id: created.id } : s,
           ),
         }));
-      })
-      .catch(logApiError("createSupplier"));
+        for (const d of supplier.data) {
+          await api.upsertObservation({
+            supplierId: created.id,
+            month: d.month,
+            local_hiring: d.localHiring,
+            completeness: d.completeness,
+            defects: d.defects,
+            quality_local_hiring: d.quality?.localHiring ?? "1",
+            quality_completeness: d.quality?.completeness ?? "1",
+            quality_defects: d.quality?.defects ?? "1",
+          });
+        }
+      } catch (e) {
+        logApiError("createSupplier")(e);
+      }
+    })();
   },
 
   deleteSupplier: (supplier: Supplier) => {
