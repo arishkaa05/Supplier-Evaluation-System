@@ -1,6 +1,6 @@
 import { KnowledgeBaseItem } from "./type";
 
-export const knowledgeBase: Array<KnowledgeBaseItem> = [
+export let knowledgeBase: Array<KnowledgeBaseItem> = [
   { "no": 1, "localHiring": { "level": "L", "trend": "up" }, "completeness": { "level": "L", "trend": "up" }, "defects": { "level": "L", "trend": "up" }, "assessment": { "level": "L", "trend": "up" } },
   { "no": 2, "localHiring": { "level": "L", "trend": "up" }, "completeness": { "level": "L", "trend": "up" }, "defects": { "level": "L", "trend": "down" }, "assessment": { "level": "L", "trend": "up" } },
   { "no": 3, "localHiring": { "level": "L", "trend": "up" }, "completeness": { "level": "L", "trend": "up" }, "defects": { "level": "M", "trend": "up" }, "assessment": { "level": "L", "trend": "up" } },
@@ -242,6 +242,10 @@ export const knowledgeBase: Array<KnowledgeBaseItem> = [
   { "no": 215, "localHiring": { "level": "H", "trend": "down" }, "completeness": { "level": "H", "trend": "down" }, "defects": { "level": "H", "trend": "up" }, "assessment": { "level": "M", "trend": "down" } },
   { "no": 216, "localHiring": { "level": "H", "trend": "down" }, "completeness": { "level": "H", "trend": "down" }, "defects": { "level": "H", "trend": "down" }, "assessment": { "level": "M", "trend": "down" } }
 ]
+
+export const setKnowledgeBase = (next: KnowledgeBaseItem[]) => {
+  knowledgeBase = next;
+};
 
 
 
