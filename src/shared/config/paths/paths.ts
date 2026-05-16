@@ -3,6 +3,10 @@ export const paths = {
     dashboards: {
       path: "/",
     },
+    supplierDashboard: {
+      path: "/dashboards/:supplierId",
+      build: (id: number | string) => `/dashboards/${id}`,
+    },
     update: {
       path: "/update",
     },

@@ -1,6 +1,8 @@
-import { useMemo, useState, FC } from "react";
+import { useMemo, FC } from "react";
 import { LayoutDashboard } from "lucide-react";
+import { Navigate, useParams } from "react-router-dom";
 import { useSupplierStore } from "@/shared/store/suppliers";
+import { paths } from "@/shared/config";
 import {
   useSupplierRules,
   SupplierFuzzyResult,
@@ -85,9 +87,9 @@ const STATUS_ORDER: Record<string, number> = {
 const Dashboards = () => {
   const { supplier } = useSupplierStore();
   const fuzzyResults = useSupplierRules();
+  const { supplierId } = useParams<{ supplierId: string }>();
 
-  const [activeId, setActiveId] = useState<number>(supplier[0]?.id ?? 1);
-
+  const activeId = Number(supplierId);
   const activeSupplier = supplier.find((s) => s.id === activeId);
   const activeFuzzy = fuzzyResults.find(
     (r) => r.supplier === activeSupplier?.supplier,
@@ -103,32 +105,33 @@ const Dashboards = () => {
     [multiop],
   );
 
+  // URL содержит неизвестный supplierId (например, после удаления поставщика).
+  // Если есть хоть один — уводим на него, иначе на корень с подсказкой.
+  if (!activeSupplier) {
+    const fallback = supplier[0];
+    if (fallback) {
+      return (
+        <Navigate
+          to={paths.app.supplierDashboard.build(fallback.id)}
+          replace
+        />
+      );
+    }
+    return (
+      <div className="p-6 text-slate-600">
+        Поставщик не найден. Загрузите CSV на странице «Обновить данные».
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
         <LayoutDashboard size={24} strokeWidth={1} />
-        <h4 className="text-4xl font-bold">Результаты работы систем</h4>
+        <h4 className="text-4xl font-bold">{activeSupplier.supplier}</h4>
       </div>
 
-      <div className="flex gap-2 mb-6">
-        {supplier.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => setActiveId(s.id)}
-            className={cn(
-              "px-4 py-2 rounded-xl border text-sm font-medium transition-colors",
-              activeId === s.id
-                ? "bg-slate-900 text-white border-slate-900"
-                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100",
-            )}
-          >
-            {s.supplier}
-          </button>
-        ))}
-      </div>
-
-      {activeSupplier && activeFuzzy && (
+      {activeFuzzy && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <FuzzyPanel result={activeFuzzy} />
