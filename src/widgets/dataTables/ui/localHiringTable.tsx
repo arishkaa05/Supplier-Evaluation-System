@@ -1,6 +1,7 @@
 import { localHiringDb } from "@/shared/config/";
 import { cn } from "@/shared/lib/utils";
 import { CellPill } from "@/shared/ui/cellPill";
+import { translateDescription } from "../lib/translate";
 
 export const LocalHiringTable = () => {
   return (
@@ -8,11 +9,11 @@ export const LocalHiringTable = () => {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold">
-            Database for criterion local hiring
+            Параметры критерия «Наём местных жителей»
           </h3>
         </div>
         <span className="text-xs rounded-full bg-white border border-slate-200 px-2 py-1">
-          Impact Factor:<b> {localHiringDb.impactFactor}</b>
+          Коэффициент влияния:<b> {localHiringDb.impactFactor}</b>
         </span>
       </div>
 
@@ -31,7 +32,7 @@ export const LocalHiringTable = () => {
                   role="row"
                 >
                   <td className="px-2 py-2 font-medium text-slate-900">
-                    {r.description}
+                    {translateDescription(r.description)}
                   </td>
 
                   <td className="px-2  ">
