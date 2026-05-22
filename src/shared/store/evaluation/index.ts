@@ -46,12 +46,20 @@ export type FuzzyBlocker = {
   details: string;
 };
 
+export type FuzzyTrimInfo = {
+  totalObservations: number;
+  usedObservations: number;
+  trimmed: boolean;
+  lastBadMonth?: number;
+};
+
 export type SupplierFuzzyResult = {
   supplier: string;
   rules: FiredRule[];
   evaluation: SupplierEvaluation | null;
   blockers: FuzzyBlocker[];
   status: "ok" | "blocked";
+  trim: FuzzyTrimInfo;
 };
 
 export type MultiopArea = {
@@ -69,7 +77,6 @@ export type MultiopEvaluation = {
   zoneDescription: string;
   contributingRules: number;
   totalActivated: number;
-  weightSum: number;
 };
 
 export type SupplierMultiopResult = {

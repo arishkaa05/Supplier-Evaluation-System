@@ -1,4 +1,4 @@
-import { useMemo, FC } from "react";
+import { useMemo, FC, ReactNode } from "react";
 import { LayoutDashboard } from "lucide-react";
 import { Navigate, useParams } from "react-router-dom";
 import { useSupplierStore } from "@/shared/store/suppliers";
@@ -6,6 +6,7 @@ import { paths } from "@/shared/config";
 import {
   useSupplierRules,
   SupplierFuzzyResult,
+  SupplierEvaluation as FuzzyEvaluation,
 } from "@/feature/calculations/model/useSupplierFuzzyResult";
 import { Zone } from "@/feature/calculations/model/aggregateScore";
 import {
@@ -134,12 +135,22 @@ const Dashboards = () => {
       {activeFuzzy && (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <FuzzyPanel result={activeFuzzy} />
+            <FuzzyPanel
+              result={activeFuzzy}
+              supplierDates={activeSupplier.data.map((d) => ({
+                month: d.month,
+                date: d.date,
+              }))}
+            />
             <MultiopPanel areas={multiop} />
           </div>
 
-          <div className="mt-6">
-            <EvaluationPanel evaluation={multiopEvaluation} />
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <FuzzyEvaluationPanel
+              evaluation={activeFuzzy.evaluation}
+              blocked={activeFuzzy.status === "blocked"}
+            />
+            <MultiopEvaluationPanel evaluation={multiopEvaluation} />
           </div>
         </>
       )}
@@ -161,49 +172,88 @@ const RuleHead: FC = () => (
   </thead>
 );
 
-const FuzzyPanel: FC<{ result: SupplierFuzzyResult }> = ({ result }) => (
-  <section className="bg-white border border-slate-200 rounded-2xl p-5">
-    <h2 className="text-lg font-semibold mb-4">
-      Система на основе нечёткой логики
-    </h2>
+const FuzzyPanel: FC<{
+  result: SupplierFuzzyResult;
+  supplierDates: { month: number; date?: string }[];
+}> = ({ result, supplierDates }) => {
+  const trim = result.trim;
+  const lastBadDate =
+    trim?.lastBadMonth != null
+      ? supplierDates.find((d) => d.month === trim.lastBadMonth)?.date
+      : undefined;
+  const firstUsedMonth =
+    trim?.lastBadMonth != null ? trim.lastBadMonth + 1 : undefined;
+  const firstUsedDate =
+    firstUsedMonth != null
+      ? supplierDates.find((d) => d.month === firstUsedMonth)?.date
+      : undefined;
 
-    {result.status === "blocked" ? (
-      <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-        <div className="font-semibold mb-2">
-          Система не формирует итоговый вывод
+  return (
+    <section className="bg-white border border-slate-200 rounded-2xl p-5">
+      <h2 className="text-lg font-semibold mb-4">
+        Система на основе нечёткой логики
+      </h2>
+
+      {trim?.trimmed && (
+        <div className="mb-4 rounded-xl border border-sky-300 bg-sky-50 p-3 text-sm text-sky-900">
+          <div className="font-semibold mb-1">
+            Использовано {trim.usedObservations} из {trim.totalObservations} наблюдений
+          </div>
+          <p>
+            Нечёткая логика работает только с точными данными, поэтому
+            наблюдения до{" "}
+            {lastBadDate ? (
+              <span className="font-semibold">{lastBadDate}</span>
+            ) : (
+              <>включительно по индексу {trim.lastBadMonth}</>
+            )}{" "}
+            (включая последнее с пропусками или экспертной оценкой) были
+            отброшены. В обработку попали наблюдения начиная с{" "}
+            <span className="font-semibold">
+              {firstUsedDate ?? `индекса ${firstUsedMonth}`}
+            </span>
+            .
+          </p>
         </div>
-        <p className="mb-2">
-          Процедура фаззификации требует точных входных значений за весь
-          горизонт наблюдений. При отсутствии или экспертно заданных
-          наблюдениях направление OFN не может быть определено корректно,
-          поэтому система не формирует итоговый вывод.
-        </p>
-        <ul className="list-disc pl-5 space-y-1">
-          {result.blockers.map((b, i) => (
-            <li key={i}>{b.details}</li>
-          ))}
-        </ul>
-      </div>
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <RuleHead />
-          <tbody className="divide-y divide-slate-200">
-            {result.rules.map((r) => (
-              <tr key={r.no} className="hover:bg-slate-50">
-                <td className="text-center px-2 py-1">{r.no}</td>
-                <td className="text-center px-2 py-1">{formatTerm(r.localHiring)}</td>
-                <td className="text-center px-2 py-1">{formatTerm(r.completeness)}</td>
-                <td className="text-center px-2 py-1">{formatTerm(r.defects)}</td>
-                <td className="text-center px-2 py-1">{formatTerm(r.assessment)}</td>
-              </tr>
+      )}
+
+      {result.status === "blocked" ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="font-semibold mb-2">
+            Система не формирует итоговый вывод
+          </div>
+          <p className="mb-2">
+            Процедура фаззификации требует точного значения за последний
+            наблюдаемый месяц. При его отсутствии или экспертной оценке
+            направление OFN не определяется.
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            {result.blockers.map((b, i) => (
+              <li key={i}>{b.details}</li>
             ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </section>
-);
+          </ul>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <RuleHead />
+            <tbody className="divide-y divide-slate-200">
+              {result.rules.map((r) => (
+                <tr key={r.no} className="hover:bg-slate-50">
+                  <td className="text-center px-2 py-1">{r.no}</td>
+                  <td className="text-center px-2 py-1">{formatTerm(r.localHiring)}</td>
+                  <td className="text-center px-2 py-1">{formatTerm(r.completeness)}</td>
+                  <td className="text-center px-2 py-1">{formatTerm(r.defects)}</td>
+                  <td className="text-center px-2 py-1">{formatTerm(r.assessment)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+};
 
 const MultiopPanel: FC<{ areas: MultiopArea[] }> = ({ areas }) => {
   const visible = useMemo(() => {
@@ -293,54 +343,45 @@ const MultiopPanel: FC<{ areas: MultiopArea[] }> = ({ areas }) => {
   );
 };
 
-const EvaluationPanel: FC<{ evaluation: MultiopEvaluation | null }> = ({ evaluation }) => {
-  if (!evaluation) {
-    return (
-      <section className="bg-white border border-slate-200 rounded-2xl p-5">
-        <h2 className="text-lg font-semibold mb-2">Итоговая оценка поставщика</h2>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          Оценка не сформирована: ни одно правило не подтверждается данными
-          поставщика. Уточните недостающие наблюдения.
+const ZoneLegend: FC = () => (
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+    {(Object.keys(ZONE_STYLES) as Zone[]).map((z) => {
+      const zs = ZONE_STYLES[z];
+      const ranges: Record<Zone, string> = {
+        red: "0,00 – 33,33",
+        yellow: "33,34 – 66,66",
+        green: "66,67 – 100,00",
+      };
+      return (
+        <div key={z} className={cn("rounded-xl border p-3", zs.bg, zs.border)}>
+          <div className="flex items-center gap-2">
+            <span className={cn("inline-block h-3 w-3 rounded-full", zs.bar)} />
+            <span className={cn("font-semibold", zs.text)}>{zs.label}</span>
+          </div>
+          <div className="mt-1 text-xs text-slate-600">{ranges[z]} баллов</div>
+          <div className="text-sm">{zs.description}</div>
         </div>
-      </section>
-    );
-  }
+      );
+    })}
+  </div>
+);
 
-  const s = ZONE_STYLES[evaluation.zone];
-
+const ScoreCard: FC<{
+  title: string;
+  description: string;
+  score: number;
+  zone: Zone;
+  footer: ReactNode;
+}> = ({ title, description, score, zone, footer }) => {
+  const s = ZONE_STYLES[zone];
   return (
     <section className="bg-white border border-slate-200 rounded-2xl p-5">
-      <h2 className="text-lg font-semibold mb-3">Итоговая оценка поставщика</h2>
-      <p className="text-sm text-slate-500 mb-4">
-        Оценка рассчитана по активированным правилам (взвешена по статусу:
-        подходит — 1.0, может подходить — 0.7, потенциально применимо — 0.4,
-        может не подходить — 0.3).
-      </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        {(Object.keys(ZONE_STYLES) as Zone[]).map((z) => {
-          const zs = ZONE_STYLES[z];
-          const ranges: Record<Zone, string> = {
-            red: "0,00 – 33,33",
-            yellow: "33,34 – 66,66",
-            green: "66,67 – 100,00",
-          };
-          return (
-            <div key={z} className={cn("rounded-xl border p-3", zs.bg, zs.border)}>
-              <div className="flex items-center gap-2">
-                <span className={cn("inline-block h-3 w-3 rounded-full", zs.bar)} />
-                <span className={cn("font-semibold", zs.text)}>{zs.label}</span>
-              </div>
-              <div className="mt-1 text-xs text-slate-600">{ranges[z]} баллов</div>
-              <div className="text-sm">{zs.description}</div>
-            </div>
-          );
-        })}
-      </div>
-
+      <h2 className="text-lg font-semibold mb-1">{title}</h2>
+      <p className="text-sm text-slate-500 mb-4">{description}</p>
+      <ZoneLegend />
       <div className="flex items-end gap-3">
         <div className={cn("text-5xl font-bold", s.text)}>
-          {evaluation.finalScore.toFixed(2)}
+          {score.toFixed(2)}
         </div>
         <div className="text-sm text-slate-500 pb-2">из 100</div>
         <div
@@ -354,28 +395,93 @@ const EvaluationPanel: FC<{ evaluation: MultiopEvaluation | null }> = ({ evaluat
           {s.label}
         </div>
       </div>
-
       <div className="mt-3 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-        <div className={cn("h-full", s.bar)} style={{ width: `${evaluation.finalScore}%` }} />
+        <div className={cn("h-full", s.bar)} style={{ width: `${score}%` }} />
       </div>
-
-      <div className="mt-3 text-sm text-slate-600 leading-relaxed">
-        Поставщик отнесён к категории «{s.label.toLowerCase()}» —{" "}
-        {s.description.toLowerCase()}. В агрегации участвует{" "}
-        <span className="font-semibold">{evaluation.contributingRules}</span> из{" "}
-        216 правил базы знаний (по которым удалось определить статус),
-        суммарный вес активаций{" "}
-        <span className="font-semibold">{evaluation.weightSum.toFixed(2)}</span>.
-        Финальный балл получен как взвешенное среднее уровней заключения по этим
-        правилам и попадает в диапазон зоны{" "}
-        <span className={cn("font-semibold", s.text)}>{s.label.toLowerCase()}</span>{" "}
-        ({evaluation.zone === "green"
-          ? "66,67–100"
-          : evaluation.zone === "yellow"
-          ? "33,34–66,66"
-          : "0–33,33"}{" "}
-        баллов).
-      </div>
+      <div className="mt-3 text-sm text-slate-600 leading-relaxed">{footer}</div>
     </section>
+  );
+};
+
+const EmptyScoreCard: FC<{ title: string; message: string }> = ({
+  title,
+  message,
+}) => (
+  <section className="bg-white border border-slate-200 rounded-2xl p-5">
+    <h2 className="text-lg font-semibold mb-2">{title}</h2>
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+      {message}
+    </div>
+  </section>
+);
+
+const FuzzyEvaluationPanel: FC<{
+  evaluation: FuzzyEvaluation | null;
+  blocked: boolean;
+}> = ({ evaluation, blocked }) => {
+  if (!evaluation) {
+    return (
+      <EmptyScoreCard
+        title="Итоговая оценка — нечёткая логика"
+        message={
+          blocked
+            ? "Оценка не сформирована: за последний месяц данные содержат пропуски или заданы экспертно."
+            : "Оценка не сформирована: ни одно правило не активировано."
+        }
+      />
+    );
+  }
+  const s = ZONE_STYLES[evaluation.zone];
+  return (
+    <ScoreCard
+      title="Итоговая оценка — нечёткая логика"
+      description="Среднее crisp-значений активированных правил, рассчитанных по точному «хвосту» наблюдений."
+      score={evaluation.finalScore}
+      zone={evaluation.zone}
+      footer={
+        <>
+          В агрегации участвует{" "}
+          <span className="font-semibold">{evaluation.activatedRules}</span>{" "}
+          правил. Поставщик отнесён к категории{" "}
+          <span className={cn("font-semibold", s.text)}>
+            {s.label.toLowerCase()}
+          </span>{" "}
+          — {s.description.toLowerCase()}.
+        </>
+      }
+    />
+  );
+};
+
+const MultiopEvaluationPanel: FC<{ evaluation: MultiopEvaluation | null }> = ({
+  evaluation,
+}) => {
+  if (!evaluation) {
+    return (
+      <EmptyScoreCard
+        title="Итоговая оценка — теория мультиопераций"
+        message="Оценка не сформирована: ни одно правило не активировано по данным поставщика."
+      />
+    );
+  }
+  const s = ZONE_STYLES[evaluation.zone];
+  return (
+    <ScoreCard
+      title="Итоговая оценка — теория мультиопераций"
+      description="Среднее crisp-значений по активированным правилам (агрегация совпадает с нечёткой логикой; различается только способ отбора правил)."
+      score={evaluation.finalScore}
+      zone={evaluation.zone}
+      footer={
+        <>
+          В агрегации участвует{" "}
+          <span className="font-semibold">{evaluation.contributingRules}</span>{" "}
+          из 216 правил базы знаний. Поставщик отнесён к категории{" "}
+          <span className={cn("font-semibold", s.text)}>
+            {s.label.toLowerCase()}
+          </span>{" "}
+          — {s.description.toLowerCase()}.
+        </>
+      }
+    />
   );
 };
