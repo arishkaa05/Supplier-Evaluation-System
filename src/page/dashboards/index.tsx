@@ -20,6 +20,7 @@ import {
 } from "@/feature/calculations/model/multiopFinalScore";
 import { knowledgeBase } from "@/shared/config";
 import { Level, Trend, KnowledgeBaseItem } from "@/shared/config/data/type";
+import type { SupplierData, MetricKey } from "@/shared/store/suppliers/type/supplierType";
 import { cn } from "@/shared/lib/utils";
 
 const formatTerm = (t?: { level: Level; trend: Trend }) =>
@@ -142,7 +143,7 @@ const Dashboards = () => {
                 date: d.date,
               }))}
             />
-            <MultiopPanel areas={multiop} />
+            <MultiopPanel areas={multiop} observations={activeSupplier.data} />
           </div>
 
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -177,10 +178,6 @@ const FuzzyPanel: FC<{
   supplierDates: { month: number; date?: string }[];
 }> = ({ result, supplierDates }) => {
   const trim = result.trim;
-  const lastBadDate =
-    trim?.lastBadMonth != null
-      ? supplierDates.find((d) => d.month === trim.lastBadMonth)?.date
-      : undefined;
   const firstUsedMonth =
     trim?.lastBadMonth != null ? trim.lastBadMonth + 1 : undefined;
   const firstUsedDate =
@@ -194,21 +191,15 @@ const FuzzyPanel: FC<{
         Система на основе нечёткой логики
       </h2>
 
-      {trim?.trimmed && (
+      {trim?.trimmed && result.status === "ok" && (
         <div className="mb-4 rounded-xl border border-sky-300 bg-sky-50 p-3 text-sm text-sky-900">
           <div className="font-semibold mb-1">
             Использовано {trim.usedObservations} из {trim.totalObservations} наблюдений
           </div>
           <p>
             Нечёткая логика работает только с точными данными, поэтому
-            наблюдения до{" "}
-            {lastBadDate ? (
-              <span className="font-semibold">{lastBadDate}</span>
-            ) : (
-              <>включительно по индексу {trim.lastBadMonth}</>
-            )}{" "}
-            (включая последнее с пропусками или экспертной оценкой) были
-            отброшены. В обработку попали наблюдения начиная с{" "}
+            наблюдения были исключены из расчётов. В обработку попали
+            наблюдения начиная с{" "}
             <span className="font-semibold">
               {firstUsedDate ?? `индекса ${firstUsedMonth}`}
             </span>
@@ -255,7 +246,49 @@ const FuzzyPanel: FC<{
   );
 };
 
-const MultiopPanel: FC<{ areas: MultiopArea[] }> = ({ areas }) => {
+const METRIC_LABEL: Record<MetricKey, string> = {
+  localHiring: "Наём местных жителей",
+  completeness: "Полнота заказа",
+  defects: "Дефекты",
+};
+
+type MetricFlags = {
+  // expert (?) есть среди ранее наблюдений (не последнее)
+  historyImprecise: boolean;
+  // expert (?) на последнем наблюдении
+  lastImprecise: boolean;
+  // пропуск или неизвестно среди ранее наблюдений
+  historyUncertain: boolean;
+  // пропуск или неизвестно на последнем наблюдении
+  lastUncertain: boolean;
+};
+
+function metricFlagsOf(obs: SupplierData[], key: MetricKey): MetricFlags {
+  const flags: MetricFlags = {
+    historyImprecise: false,
+    lastImprecise: false,
+    historyUncertain: false,
+    lastUncertain: false,
+  };
+  const lastIdx = obs.length - 1;
+  obs.forEach((o, i) => {
+    const q = o.quality?.[key];
+    const isLast = i === lastIdx;
+    if (q === "0" || q === "3") {
+      if (isLast) flags.lastUncertain = true;
+      else flags.historyUncertain = true;
+    } else if (q === "2") {
+      if (isLast) flags.lastImprecise = true;
+      else flags.historyImprecise = true;
+    }
+  });
+  return flags;
+}
+
+const MultiopPanel: FC<{ areas: MultiopArea[]; observations: SupplierData[] }> = ({
+  areas,
+  observations,
+}) => {
   const visible = useMemo(() => {
     const filtered = areas.filter((a) => VISIBLE_STATUSES.has(String(a.status)));
     return filtered.sort((a, b) => {
@@ -265,6 +298,51 @@ const MultiopPanel: FC<{ areas: MultiopArea[] }> = ({ areas }) => {
       return Number(a.id) - Number(b.id);
     });
   }, [areas]);
+
+  // Единая плашка-объяснение для всей выборки. Заголовок зависит от того,
+  // какие статусы присутствуют (status=4 — «неопределённости», status 5/6 —
+  // «неточности»). Подпись составляется из реальных метрик: для каждой
+  // выбираем подходящую формулировку или пропускаем, если метрика чистая.
+  const banner = useMemo(() => {
+    const metricKeys: MetricKey[] = ["localHiring", "completeness", "defects"];
+    const flags: Record<MetricKey, MetricFlags> = {
+      localHiring: metricFlagsOf(observations, "localHiring"),
+      completeness: metricFlagsOf(observations, "completeness"),
+      defects: metricFlagsOf(observations, "defects"),
+    };
+
+    const anyUncertain = metricKeys.some(
+      (k) => flags[k].historyUncertain || flags[k].lastUncertain,
+    );
+    const anyImprecise = metricKeys.some(
+      (k) => flags[k].historyImprecise || flags[k].lastImprecise,
+    );
+    if (!anyUncertain && !anyImprecise) return null;
+
+    // Сначала про неопределённости (история имеет приоритет над последней
+    // точкой), потом про неточности.
+    const lines: string[] = [];
+    for (const key of metricKeys) {
+      const f = flags[key];
+      const name = METRIC_LABEL[key];
+      if (f.historyUncertain) lines.push(`Исторические данные для критерия «${name}» неопределены`);
+      else if (f.lastUncertain) lines.push(`Критерий «${name}» неопределён`);
+    }
+    for (const key of metricKeys) {
+      const f = flags[key];
+      const name = METRIC_LABEL[key];
+      if (f.historyImprecise) lines.push(`Исторические данные для критерия «${name}» определены неточно`);
+      else if (f.lastImprecise) lines.push(`Критерий «${name}» определён неточно`);
+    }
+
+    return {
+      title: anyUncertain
+        ? "Правила определены на основе данных с неопределённостями"
+        : "Правила определены на основе данных с неточностями",
+      lines,
+      tone: anyUncertain ? ("gray" as const) : ("yellow" as const),
+    };
+  }, [observations]);
 
   const ruleByNo = useMemo(() => {
     const m = new Map<number, KnowledgeBaseItem>();
@@ -283,61 +361,70 @@ const MultiopPanel: FC<{ areas: MultiopArea[] }> = ({ areas }) => {
           Подходящих правил не найдено.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-slate-50">
-              <tr className="text-xs text-slate-600 uppercase tracking-wide">
-                <th className="px-2 py-2 border-b border-slate-200 text-center">№ правила</th>
-                <th className="px-2 py-2 border-b border-slate-200 text-center">Наём</th>
-                <th className="px-2 py-2 border-b border-slate-200 text-center">Полнота</th>
-                <th className="px-2 py-2 border-b border-slate-200 text-center">Дефекты</th>
-                <th className="px-2 py-2 border-b border-slate-200 text-center">Заключение</th>
-                <th className="px-2 py-2 border-b border-slate-200 text-left">Описание</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {visible.map((a) => {
-                const rule = ruleByNo.get(Number(a.id));
-                const status = String(a.status);
-                const meta = STATUS_META[status];
-                const showStatus = status !== "2";
-                return (
-                  <tr key={String(a.id)} className="hover:bg-slate-50">
-                    <td className="px-2 py-1 text-center whitespace-nowrap font-medium">
-                      <div className="inline-flex items-center gap-2 justify-center flex-wrap">
-                        <span>{a.id}</span>
-                        {showStatus && meta && (
-                          <span
-                            className={cn(
-                              "px-2 py-0.5 rounded-md text-[10px] font-semibold border whitespace-nowrap",
-                              TONE_STYLES[meta.tone],
-                            )}
-                          >
-                            {SHORT_STATUS_LABEL[status] ?? meta.label}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="text-center px-2 py-1">{formatTerm(rule?.localHiring)}</td>
-                    <td className="text-center px-2 py-1">{formatTerm(rule?.completeness)}</td>
-                    <td className="text-center px-2 py-1">{formatTerm(rule?.defects)}</td>
-                    <td className="text-center px-2 py-1">{formatTerm(rule?.assessment)}</td>
-                    <td className="text-left px-2 py-1 text-xs text-slate-600">
-                      {a.answer ?? "—"}
-                      {a.explanation && a.explanation.length > 0 && (
-                        <ul className="list-disc pl-5 mt-1 space-y-0.5">
-                          {a.explanation.map((line, i) => (
-                            <li key={i}>{line}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {banner && (
+            <div
+              className={cn(
+                "mb-4 rounded-md border px-3 py-2 text-sm",
+                TONE_STYLES[banner.tone],
+              )}
+            >
+              <div className="font-semibold mb-1">{banner.title}</div>
+              {banner.lines.length > 0 && (
+                <ul className="list-disc pl-5 space-y-0.5">
+                  {banner.lines.map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead className="bg-slate-50">
+                <tr className="text-xs text-slate-600 uppercase tracking-wide">
+                  <th className="px-2 py-2 border-b border-slate-200 text-center">№ правила</th>
+                  <th className="px-2 py-2 border-b border-slate-200 text-center">Наём</th>
+                  <th className="px-2 py-2 border-b border-slate-200 text-center">Полнота</th>
+                  <th className="px-2 py-2 border-b border-slate-200 text-center">Дефекты</th>
+                  <th className="px-2 py-2 border-b border-slate-200 text-center">Заключение</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {visible.map((a) => {
+                  const rule = ruleByNo.get(Number(a.id));
+                  const status = String(a.status);
+                  const meta = STATUS_META[status];
+                  const showStatus = status !== "2";
+                  return (
+                    <tr key={String(a.id)} className="hover:bg-slate-50">
+                      <td className="px-2 py-1 text-center whitespace-nowrap font-medium">
+                        <div className="inline-flex items-center gap-2 justify-center flex-wrap">
+                          <span>{a.id}</span>
+                          {showStatus && meta && (
+                            <span
+                              className={cn(
+                                "px-2 py-0.5 rounded-md text-[10px] font-semibold border whitespace-nowrap",
+                                TONE_STYLES[meta.tone],
+                              )}
+                            >
+                              {SHORT_STATUS_LABEL[status] ?? meta.label}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-center px-2 py-1">{formatTerm(rule?.localHiring)}</td>
+                      <td className="text-center px-2 py-1">{formatTerm(rule?.completeness)}</td>
+                      <td className="text-center px-2 py-1">{formatTerm(rule?.defects)}</td>
+                      <td className="text-center px-2 py-1">{formatTerm(rule?.assessment)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </section>
   );

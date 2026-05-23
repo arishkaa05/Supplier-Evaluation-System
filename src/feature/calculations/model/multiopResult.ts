@@ -24,9 +24,9 @@ export const STATUS_META: Record<
   "0": { label: "Информация отсутствует", tone: "gray" },
   "1": { label: "Не подходит", tone: "red" },
   "2": { label: "Подходит", tone: "green" },
-  "3": { label: "Противоречие эксперта и данных", tone: "yellow" },
+  "3": { label: "Противоречие", tone: "yellow" },
   "4": { label: "Часть данных недоступна", tone: "gray" },
-  "5": { label: "Может не подходить (на опыте эксперта)", tone: "yellow" },
-  "6": { label: "Может подходить (на опыте эксперта)", tone: "yellow" },
+  "5": { label: "Может не подходить", tone: "yellow" },
+  "6": { label: "Может подходить", tone: "yellow" },
   "7": { label: "Требуются уточнения", tone: "gray" },
 };
