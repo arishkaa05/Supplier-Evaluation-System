@@ -1,0 +1,56 @@
+<mxfile host="app.diagrams.net" modified="2026-05-24T00:00:00.000Z" agent="text" version="24.0.0" type="device">
+  <diagram name="Crisp" id="crisp">
+    <mxGraphModel dx="800" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="start" value="Начало" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="320" y="40" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="input" value="Правило базы знаний&#10;и последние значения 3 метрик" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="260" y="130" width="280" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dirDet" value="Для каждой метрики&#10;вычислить определитель направления —&#10;знак-нагруженное число, показывающее&#10;отклонение значения от пика терма" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="260" y="230" width="280" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dirAgg" value="Совокупный определитель —&#10;взвешенная сумма трёх:&#10;+1 для наёма и полноты, −1 для дефектов" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="260" y="370" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="getB" value="Взять трапециевидную функцию&#10;заключения правила&#10;(уровень + направление assessment)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="260" y="490" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="shift" value="Сдвинуть трапецию заключения&#10;в сторону «лучше» или «хуже»&#10;пропорционально совокупному определителю" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="260" y="610" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="defuzz" value="Привести сдвинутую трапецию&#10;к одному числу в диапазоне [0; 100]&#10;(дефаззификация)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="260" y="730" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="output" value="crisp-балл правила" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="260" y="850" width="280" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="end" value="Конец" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#000000;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="320" y="950" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="start" target="input"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="input" target="dirDet"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="dirDet" target="dirAgg"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="dirAgg" target="getB"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="getB" target="shift"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="shift" target="defuzz"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="defuzz" target="output"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;endArrow=classic;endFill=1;" edge="1" parent="1" source="output" target="end"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
