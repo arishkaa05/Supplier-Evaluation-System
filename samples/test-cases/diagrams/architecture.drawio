@@ -72,7 +72,7 @@
         <mxCell id="api4" value="/api/knowledge-base — база знаний" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
           <mxGeometry x="700" y="245" width="300" height="25" as="geometry" />
         </mxCell>
-        <mxCell id="api5" value="/api/evaluate/fuzzy и /multiop — расчёт оценки" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=11;align=left;spacingLeft=8;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="api5" value="/api/evaluate/... — расчёт оценки (нечёткая логика, мультиоперации)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=11;align=left;spacingLeft=8;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="700" y="275" width="300" height="25" as="geometry" />
         </mxCell>
 
