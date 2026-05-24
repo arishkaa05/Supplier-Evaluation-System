@@ -1,0 +1,125 @@
+<mxfile host="app.diagrams.net" modified="2026-05-24T00:00:00.000Z" agent="text" version="24.0.0" type="device">
+  <diagram name="Architecture" id="architecture-001">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="user" value="Пользователь&#10;(аналитик)" style="shape=umlActor;verticalLabelPosition=bottom;labelBackgroundColor=#ffffff;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="370" width="40" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="browser" value="Браузер" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;fontSize=14;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="160" y="80" width="380" height="640" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ui" value="Дашборд (React-приложение)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#388E3C;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="180" y="120" width="340" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="comp1" value="Страница «Поставщики»&#10;(drag-and-drop CSV-файлов)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#388E3C;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="160" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="comp2" value="Страница «Дашборд поставщика»&#10;(нечёткая логика + мультиоперации)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#388E3C;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="210" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="comp3" value="Страница базы знаний и критериев&#10;(редактор)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#388E3C;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="255" width="300" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="logic" value="Логика фронтенда" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#F57C00;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="180" y="320" width="340" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="logic1" value="Парсер CSV&#10;(значения + флаги достоверности)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#F57C00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="360" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="logic2" value="Хранилище состояния&#10;(поставщики, оценки, кэш)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#F57C00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="410" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="logic3" value="HTTP-клиент&#10;(запросы к бэкенду)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#F57C00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="455" width="300" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="render" value="Компоненты отображения" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="180" y="520" width="340" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="render1" value="Панель нечёткой логики&#10;(таблица правил + плашка)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="560" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="render2" value="Панель мультиопераций&#10;(таблица включений + плашка)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="610" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="render3" value="Карточки финальных оценок&#10;(зоны: красная / жёлтая / зелёная)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="200" y="655" width="300" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="server" value="Сервер" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontSize=14;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="660" y="80" width="380" height="500" as="geometry" />
+        </mxCell>
+
+        <mxCell id="api" value="REST API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="680" y="120" width="340" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="api1" value="/api/suppliers — поставщики (CRUD)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="700" y="155" width="300" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="api2" value="/api/observations — наблюдения (CRUD)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="700" y="185" width="300" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="api3" value="/api/criteria — критерии оценки" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="700" y="215" width="300" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="api4" value="/api/knowledge-base — база знаний" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=11;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="700" y="245" width="300" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="api5" value="/api/evaluate/fuzzy и /multiop — расчёт оценки" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=11;align=left;spacingLeft=8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="275" width="300" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="calc" value="Вычислительные модули" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F7FA;strokeColor=#00838F;fontSize=13;fontStyle=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="680" y="320" width="340" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="calc1" value="ИС на основе нечёткой логики" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838F;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="700" y="360" width="300" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="calc2" value="ИС на основе теории мультиопераций" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838F;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="700" y="395" width="300" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="calc3" value="Общий блок: расчёт числовой оценки правила" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#00838F;fontSize=12;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="700" y="425" width="300" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="orm" value="ORM-слой&#10;(модели поставщиков, наблюдений, критериев, правил)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7B1FA2;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="680" y="480" width="340" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="db" value="База данных&#10;(поставщики, наблюдения, критерии, правила)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#FFEBEE;strokeColor=#C62828;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="620" width="240" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ed1" value="HTTP" style="endArrow=classic;startArrow=classic;html=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="user" target="ui">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed2" value="REST&#10;(JSON over HTTP)" style="endArrow=classic;startArrow=classic;html=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="logic3" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed3" style="endArrow=classic;html=1;fontSize=11;" edge="1" parent="1" source="api" target="calc">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed4" style="endArrow=classic;html=1;fontSize=11;" edge="1" parent="1" source="api" target="orm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed5" value="SQL" style="endArrow=classic;startArrow=classic;html=1;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="orm" target="db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed6" style="endArrow=classic;html=1;fontSize=11;dashed=1;" edge="1" parent="1" source="logic1" target="logic2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed7" style="endArrow=classic;html=1;fontSize=11;dashed=1;" edge="1" parent="1" source="logic2" target="render">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
